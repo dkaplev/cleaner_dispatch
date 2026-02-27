@@ -4,7 +4,7 @@ import { dispatchJob, getResponseMinutes } from "@/lib/dispatch";
 
 /**
  * Cron endpoint: mark timed-out offers (no response within RESPONSE_MINUTES) and route job to next cleaner.
- * Call periodically (e.g. every 5 min) via Vercel Cron or external cron.
+ * Call periodically via Vercel Cron or external cron. Vercel Hobby allows only daily (e.g. 08:00 UTC); for more frequent runs use an external cron or Pro.
  * Requires CRON_SECRET: send Authorization: Bearer <CRON_SECRET> or ?secret=<CRON_SECRET>.
  */
 export async function GET(request: Request) {
