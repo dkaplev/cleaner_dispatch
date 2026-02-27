@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password_hash String
+  role          String
+  created_at    DateTime  @default(now())
+  properties    Property[]
+  cleaners      Cleaner[]
+  jobs          Job[]
+
+  @@map("users")
+}
+
+model Property {
+  id                        String            @id @default(cuid())
+  landlord_id               String
+  landlord                  User              @relation(fields: [landlord_id], references: [id], onDelete: Cascade)
+  name                      String
+  checkout_time_default     DateTime?
+  cleaning_duration_minutes Int?
+  instructions_text         String?
+  created_at                DateTime          @default(now())
+  updated_at                DateTime          @updatedAt
+  cleanings                 Cleaning[]
+  jobs                      Job[]
+  property_cleaners         PropertyCleaner[]
+
+  @@map("properties")
+}
+
+model Cleaner {
+  id               String             @id @default(cuid())
+  landlord_id      String
+  landlord         User               @relation(fields: [landlord_id], references: [id], onDelete: Cascade)
+  name             String
+  telegram_chat_id String?
+  notes            String?
+  is_active        Boolean            @default(true)
+  created_at       DateTime           @default(now())
+  cleanings        Cleaning[]
+  assigned_jobs    Job[]              @relation("AssignedCleaner")
+  property_cleaners PropertyCleaner[]
+  dispatch_attempts DispatchAttempt[]
+
+  @@map("cleaners")
+}
+
+model Cleaning {
+  id           String   @id @default(cuid())
+  property_id  String
+  property     Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+  cleaner_id   String
+  cleaner      Cleaner  @relation(fields: [cleaner_id], references: [id], onDelete: Cascade)
+  scheduled_at DateTime
+  status       String   @default("scheduled") // scheduled | completed | cancelled
+  notes        String?
+  created_at   DateTime @default(now())
+
+  @@map("cleanings")
+}
+
+// Job = cleaning window to be dispatched (offer to cleaners → accept/decline → assigned_cleaner)
+model Job {
+  id                   String             @id @default(cuid())
+  landlord_id          String
+  landlord             User               @relation(fields: [landlord_id], references: [id], onDelete: Cascade)
+  property_id          String
+  property             Property           @relation(fields: [property_id], references: [id], onDelete: Cascade)
+  booking_id           String?
+  window_start         DateTime
+  window_end           DateTime
+  status               String             @default("new") // new | offered | accepted | in_progress | done_awaiting_review | completed | cancelled
+  assigned_cleaner_id  String?
+  assigned_cleaner     Cleaner?           @relation("AssignedCleaner", fields: [assigned_cleaner_id], references: [id], onDelete: SetNull)
+  created_at           DateTime           @default(now())
+  dispatch_attempts    DispatchAttempt[]
+
+  @@map("jobs")
+}
+
+// Per-property primary/fallback cleaner assignment (for dispatch order)
+model PropertyCleaner {
+  id           String   @id @default(cuid())
+  property_id  String
+  property     Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+  cleaner_id   String
+  cleaner      Cleaner  @relation(fields: [cleaner_id], references: [id], onDelete: Cascade)
+  is_primary   Boolean  @default(false)
+  is_fallback  Boolean  @default(false)
+  priority     Int      @default(0) // lower = offered first among fallbacks
+  created_at   DateTime @default(now())
+
+  @@unique([property_id, cleaner_id])
+  @@map("property_cleaners")
+}
+
+// One row per offer sent to a cleaner for a job (for history and locking)
+model DispatchAttempt {
+  id            String    @id @default(cuid())
+  job_id        String
+  job           Job       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  cleaner_id    String
+  cleaner       Cleaner   @relation(fields: [cleaner_id], references: [id], onDelete: Cascade)
+  offer_token   String?   @unique // short-lived token for Accept/Decline buttons (Telegram callback_data)
+  offer_sent_at DateTime  @default(now())
+  offer_status  String   @default("sent") // sent | accepted | declined | timeout | cancelled
+  responded_at   DateTime?
+  batch_id      String?   // optional, for grouping parallel offers
+  created_at    DateTime  @default(now())
+
+  @@map("dispatch_attempts")
+}
