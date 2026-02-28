@@ -4,7 +4,11 @@ import { compare } from "bcryptjs";
 import { getPrisma } from "@/lib/prisma";
 import { authConfig } from "./auth.config";
 
-const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+// Use placeholder during Vercel build when env vars are not injected yet; runtime will use real secret.
+const secret =
+  process.env.NEXTAUTH_SECRET ||
+  process.env.AUTH_SECRET ||
+  (process.env.VERCEL ? "build-placeholder-do-not-use-at-runtime" : undefined);
 if (!secret) {
   throw new Error(
     "NEXTAUTH_SECRET (or AUTH_SECRET) is not set. Add it to .env — generate with: npx auth secret"
