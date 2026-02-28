@@ -49,8 +49,22 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Forgot password error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    if (
+      msg.includes("password_reset_tokens") ||
+      msg.includes("does not exist") ||
+      msg.includes("Unknown table")
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Password reset is not set up. The database migration may not have been run. Run: npx prisma migrate deploy",
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
-      { error: "Something went wrong" },
+      { error: "Something went wrong. Please try again or contact support." },
       { status: 500 }
     );
   } finally {
