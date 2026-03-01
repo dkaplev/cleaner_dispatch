@@ -57,7 +57,7 @@ export default async function EditJobPage({
     if (prisma) await prisma.$disconnect();
   }
 
-  if (!job) redirect("/dashboard/jobs");
+  if (!job) redirect("/dashboard/cleanings");
 
   const showReviewForm =
     job.status === "done_awaiting_review" && !job.review && job.assigned_cleaner;

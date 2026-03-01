@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getPrisma } from "@/lib/prisma";
+import { dispatchJob, offerJobToCleaner } from "@/lib/dispatch";
 
 const JOB_STATUSES = [
   "new",
@@ -56,6 +57,8 @@ export async function POST(request: Request) {
         : null;
     const booking_id =
       typeof body.booking_id === "string" ? body.booking_id.trim() || null : null;
+    const cleaner_id =
+      typeof body.cleaner_id === "string" ? body.cleaner_id.trim() || null : null;
 
     if (!property_id) {
       return NextResponse.json({ error: "Property is required" }, { status: 400 });
@@ -102,7 +105,19 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(job);
+    // Send Telegram offer: to specific cleaner (if chosen) or via fallback
+    if (cleaner_id) {
+      const result = await offerJobToCleaner(prisma, job.id, cleaner_id);
+      if (!result.success) {
+        return NextResponse.json({ ...job, offer_error: result.error }, { status: 201 });
+      }
+      return NextResponse.json({ ...job, attempt: result.attempt }, { status: 201 });
+    }
+    const result = await dispatchJob(prisma, job.id);
+    if (!result.success) {
+      return NextResponse.json({ ...job, offer_error: result.error }, { status: 201 });
+    }
+    return NextResponse.json({ ...job, attempt: result.attempt }, { status: 201 });
   } catch (error) {
     console.error("Job create error:", error);
     return NextResponse.json({ error: "Failed to create job" }, { status: 500 });

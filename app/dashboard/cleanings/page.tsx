@@ -9,65 +9,50 @@ export default async function CleaningsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  let cleanings: {
-    id: string;
-    scheduled_at: Date;
-    status: string;
-    notes: string | null;
-    property: { id: string; name: string };
-    cleaner: { id: string; name: string };
-  }[] = [];
   let jobs: {
     id: string;
     window_start: Date;
     window_end: Date;
     status: string;
+    reminder_sent_at: Date | null;
     property: { id: string; name: string };
     assigned_cleaner: { id: string; name: string } | null;
+    dispatch_attempts: { offer_status: string; cleaner: { name: string } }[];
   }[] = [];
   let prisma;
   try {
     prisma = getPrisma();
-    [cleanings, jobs] = await Promise.all([
-      prisma.cleaning.findMany({
-        where: { property: { landlord_id: session.user.id } },
-        include: {
-          property: { select: { id: true, name: true } },
-          cleaner: { select: { id: true, name: true } },
+    jobs = await prisma.job.findMany({
+      where: { landlord_id: session.user.id },
+      include: {
+        property: { select: { id: true, name: true } },
+        assigned_cleaner: { select: { id: true, name: true } },
+        dispatch_attempts: {
+          orderBy: { offer_sent_at: "desc" },
+          select: { offer_status: true, cleaner: { select: { name: true } } },
         },
-        orderBy: { scheduled_at: "asc" },
-      }),
-      prisma.job.findMany({
-        where: { landlord_id: session.user.id },
-        include: {
-          property: { select: { id: true, name: true } },
-          assigned_cleaner: { select: { id: true, name: true } },
-        },
-        orderBy: { window_start: "asc" },
-      }),
-    ]);
+      },
+      orderBy: { window_start: "asc" },
+    });
   } finally {
     if (prisma) await prisma.$disconnect();
   }
 
-  const cleaningsForList = cleanings.map((c) => ({
-    type: "cleaning" as const,
-    id: c.id,
-    scheduled_at: c.scheduled_at.toISOString(),
-    status: c.status,
-    notes: c.notes,
-    property: c.property,
-    cleaner: c.cleaner,
-  }));
-  const jobsForList = jobs.map((j) => ({
-    type: "job" as const,
-    id: j.id,
-    window_start: j.window_start.toISOString(),
-    window_end: j.window_end.toISOString(),
-    status: j.status,
-    property: j.property,
-    assigned_cleaner: j.assigned_cleaner,
-  }));
+  const jobsForList = jobs.map((j) => {
+    const considering = j.dispatch_attempts.filter((a) => a.offer_status === "sent").length;
+    const latestAttempt = j.dispatch_attempts[0];
+    return {
+      id: j.id,
+      window_start: j.window_start.toISOString(),
+      window_end: j.window_end.toISOString(),
+      status: j.status,
+      reminder_sent_at: j.reminder_sent_at?.toISOString() ?? null,
+      property: j.property,
+      assigned_cleaner: j.assigned_cleaner,
+      offered_to_cleaner_name: j.status === "offered" && latestAttempt ? latestAttempt.cleaner.name : null,
+      cleaners_considering: considering,
+    };
+  });
 
   return (
     <div className="min-h-screen bg-zinc-50 p-6">
@@ -79,13 +64,13 @@ export default async function CleaningsPage() {
             href="/dashboard/cleanings/new"
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
           >
-            New cleaning
+            Assign job
           </Link>
         </div>
         <p className="mt-2 text-sm text-zinc-500">
-          Assign to a cleaner from your roster or create a job to find someone later. All assignments and jobs appear below.
+          One place for all cleaning jobs. Choose a cleaner or let the system use primary/fallback. The cleaner gets a Telegram message with Accept/Decline and, after they accept, a link to upload photos and mark done.
         </p>
-        <DispatchList cleanings={cleaningsForList} jobs={jobsForList} />
+        <DispatchList jobs={jobsForList} />
         <p className="mt-4 text-sm text-zinc-500">
           <Link href="/dashboard" className="text-zinc-700 underline hover:no-underline">
             Back to dashboard

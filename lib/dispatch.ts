@@ -136,6 +136,91 @@ export async function dispatchJob(
   };
 }
 
+/**
+ * Offer a job to a specific cleaner (landlord chose this cleaner). Sends Telegram message with Accept/Decline.
+ * Use when the landlord selected a cleaner in Dispatch. Same Telegram flow as dispatchJob.
+ */
+export async function offerJobToCleaner(
+  prisma: Awaited<ReturnType<typeof getPrisma>>,
+  jobId: string,
+  cleanerId: string
+): Promise<
+  | { success: true; attempt: { id: string; cleaner_id: string; cleaner_name: string } }
+  | { success: false; error: string }
+> {
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    include: {
+      property: { select: { id: true, name: true, landlord_id: true } },
+    },
+  });
+  if (!job) return { success: false, error: "Job not found" };
+  if (job.status !== "new" && job.status !== "offered") {
+    return { success: false, error: "Job can only be offered when status is new or offered" };
+  }
+
+  const cleaner = await prisma.cleaner.findFirst({
+    where: {
+      id: cleanerId,
+      landlord_id: job.landlord_id,
+      is_active: true,
+    },
+    select: { id: true, name: true, telegram_chat_id: true },
+  });
+  if (!cleaner) return { success: false, error: "Cleaner not found" };
+  if (!cleaner.telegram_chat_id?.trim()) {
+    return { success: false, error: "This cleaner has no Telegram linked. Ask them to use the Link Telegram link from their profile." };
+  }
+
+  const offerToken = generateOfferToken();
+  const attempt = await prisma.dispatchAttempt.create({
+    data: {
+      job_id: jobId,
+      cleaner_id: cleaner.id,
+      offer_token: offerToken,
+      offer_status: "sent",
+    },
+    select: { id: true, cleaner_id: true, cleaner: { select: { name: true } } },
+  });
+
+  const responseMinutes = getResponseMinutes();
+  const messageText =
+    `🧹 <b>Cleaning job</b>\n\n` +
+    `Property: <b>${escapeTg(job.property.name)}</b>\n` +
+    `Window: ${formatJobWindow(job.window_start, job.window_end)}\n\n` +
+    `Tap Accept to take this job, or Decline to pass.\n` +
+    `You have about ${responseMinutes} minutes before we may offer this job to someone else.`;
+
+  try {
+    await sendTelegramOfferMessage(
+      cleaner.telegram_chat_id!,
+      messageText,
+      offerToken
+    );
+  } catch (e) {
+    console.error("[dispatch] Telegram send failed (offerJobToCleaner):", e);
+    await prisma.dispatchAttempt.update({
+      where: { id: attempt.id },
+      data: { offer_status: "cancelled" },
+    });
+    return { success: false, error: "Failed to send Telegram message" };
+  }
+
+  await prisma.job.update({
+    where: { id: jobId },
+    data: { status: "offered" },
+  });
+
+  return {
+    success: true,
+    attempt: {
+      id: attempt.id,
+      cleaner_id: attempt.cleaner_id,
+      cleaner_name: attempt.cleaner.name,
+    },
+  };
+}
+
 function escapeTg(s: string): string {
   return s
     .replace(/&/g, "&amp;")

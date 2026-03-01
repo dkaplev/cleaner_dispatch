@@ -54,7 +54,7 @@ export function JobReviewForm({ jobId, cleanerName, media }: Props) {
         setError(data.error || "Failed to save review");
         return;
       }
-      router.push("/dashboard/jobs");
+      router.push("/dashboard/cleanings");
       router.refresh();
     } finally {
       setLoading(false);

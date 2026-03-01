@@ -33,9 +33,9 @@ export default async function NewCleaningPage() {
     <div className="min-h-screen bg-zinc-50 p-6">
       <DashboardHeader userEmail={session.user.email ?? ""} />
       <main className="mt-8 max-w-lg">
-        <h2 className="text-lg font-semibold text-zinc-900">Dispatch</h2>
+        <h2 className="text-lg font-semibold text-zinc-900">Assign job</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Assign to a cleaner from your roster or create a job to find someone later.
+          Choose a cleaner or let the system use primary/fallback. The cleaner receives a Telegram message with Accept/Decline and, after they accept, a link to upload photos and mark done.
         </p>
         <CleaningForm properties={properties} cleaners={cleaners} />
       </main>

@@ -41,27 +41,33 @@ export async function sendTelegramOfferMessage(
   if (!token || !chatId?.trim()) return;
 
   // Telegram callback_data max 64 bytes; "accept:XX" / "decline:XX" with 24-char token is safe
+  const acceptData = `accept:${offerToken}`;
+  const declineData = `decline:${offerToken}`;
+  if (acceptData.length > 64 || declineData.length > 64) {
+    console.error("Telegram offer: callback_data too long", { acceptLen: acceptData.length, declineLen: declineData.length });
+  }
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
+  const body = {
+    chat_id: chatId.trim(),
+    text,
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: "✅ Accept", callback_data: acceptData },
+          { text: "❌ Decline", callback_data: declineData },
+        ],
+      ],
+    },
+  };
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId.trim(),
-      text,
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: "✅ Accept", callback_data: `accept:${offerToken}` },
-            { text: "❌ Decline", callback_data: `decline:${offerToken}` },
-          ],
-        ],
-      },
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = await res.text();
-    console.error("Telegram sendMessage (offer) failed:", res.status, err);
+    console.error("Telegram sendMessage (offer) failed:", res.status, err, "payload callback_data length: accept:", acceptData.length, "decline:", declineData.length);
     throw new Error("Telegram send failed");
   }
 }

@@ -68,7 +68,7 @@ export default async function DashboardPage() {
               >
                 Dispatch
               </Link>
-              <span className="text-zinc-500 text-sm ml-2">— Assign to a cleaner or create a job to find someone</span>
+              <span className="text-zinc-500 text-sm ml-2">— Assign jobs (choose cleaner or use fallback); cleaner gets Accept/Decline and photo upload in Telegram</span>
             </li>
           </ul>
           <TelegramTest />
