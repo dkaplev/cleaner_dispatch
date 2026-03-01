@@ -116,7 +116,16 @@ export async function POST(request: Request) {
       where: { id: cleanerId },
       data: { telegram_chat_id: chatId },
     });
-    console.log("[Telegram webhook] Updated cleaner", cleanerId, "telegram_chat_id =", chatId);
+
+    const updated = await prisma.cleaner.findUnique({
+      where: { id: cleanerId },
+      select: { telegram_chat_id: true },
+    });
+    if (updated?.telegram_chat_id !== chatId) {
+      console.error("[Telegram webhook] Update may not have persisted; read back:", updated?.telegram_chat_id);
+    } else {
+      console.log("[Telegram webhook] Updated cleaner", cleanerId, "telegram_chat_id =", chatId);
+    }
 
     try {
       await sendTelegramMessage(

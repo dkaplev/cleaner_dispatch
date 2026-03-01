@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 import { DashboardHeader } from "../../../dashboard-header";
 import { CleanerForm } from "../../cleaner-form";
 import { CleanerTelegramLink } from "../../cleaner-telegram-link";

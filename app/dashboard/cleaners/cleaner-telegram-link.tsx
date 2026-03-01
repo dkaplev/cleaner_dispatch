@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type Props = {
@@ -9,7 +11,9 @@ type Props = {
 };
 
 export function CleanerTelegramLink({ botUsername, cleanerId, currentChatId }: Props) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const link =
     botUsername?.trim() && cleanerId
@@ -63,17 +67,31 @@ export function CleanerTelegramLink({ botUsername, cleanerId, currentChatId }: P
           You can send a new link to re-link a different Telegram account.
         </p>
       ) : (
-        <p className="mt-1 text-sm text-zinc-600">
-          Not linked yet. Send the link below to your cleaner. When they open it and tap <strong>Start</strong>, their
-          Telegram will be linked automatically.
-        </p>
+        <>
+          <p className="mt-1 text-sm text-zinc-600">
+            Not linked yet. Send the link below to your cleaner. When they open it in Telegram and tap <strong>Start</strong>, they’ll be linked and you’ll be able to assign them jobs here.
+          </p>
+          <p className="mt-2 text-xs text-zinc-500">
+            After they tap Start, click <strong>Refresh status</strong> below to see their Telegram ID.
+          </p>
+          <button
+            type="button"
+            onClick={async () => {
+              setRefreshing(true);
+              router.refresh();
+              setTimeout(() => setRefreshing(false), 500);
+            }}
+            disabled={refreshing}
+            className="mt-2 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+          >
+            {refreshing ? "Refreshing…" : "Refresh status"}
+          </button>
+        </>
       )}
       <details className="mt-2 text-xs text-zinc-500">
-        <summary className="cursor-pointer hover:text-zinc-700">If nothing happens when they tap Start</summary>
+        <summary className="cursor-pointer hover:text-zinc-700">If they tapped Start but still not linked</summary>
         <p className="mt-1 rounded bg-zinc-100 p-2 text-zinc-600">
-          Telegram must be able to call your app’s webhook. If you’re on <strong>localhost</strong>, it can’t — use{" "}
-          <strong>ngrok</strong> (e.g. <code>ngrok http 3000</code>), then set the webhook once with the ngrok HTTPS URL +{" "}
-          <code>/api/telegram/webhook</code>. Check your server terminal for <code>[Telegram webhook]</code> logs when they tap Start.
+          <Link href="/dashboard" className="font-medium text-zinc-800 underline hover:no-underline">Open the Dashboard</Link> and click <strong>Reconnect Telegram</strong>. Then send this link to your cleaner again and have them tap Start. After that, click <strong>Refresh status</strong> above.
         </p>
       </details>
       <div className="mt-3 flex flex-wrap items-center gap-2">
