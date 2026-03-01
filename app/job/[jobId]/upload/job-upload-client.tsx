@@ -25,9 +25,15 @@ export function JobUploadClient({ token, jobId }: { token: string; jobId: string
         method: "POST",
         body: formData,
       });
-      const data = await res.json().catch(() => ({}));
+      let data: { error?: string; uploaded?: number } = {};
+      try {
+        const text = await res.text();
+        if (text) data = JSON.parse(text) as { error?: string; uploaded?: number };
+      } catch {
+        // non-JSON response (e.g. 500 error page)
+      }
       if (!res.ok) {
-        setMessage({ type: "err", text: data.error || "Upload failed" });
+        setMessage({ type: "err", text: data.error || `Upload failed (${res.status})` });
         return;
       }
       setMessage({ type: "ok", text: `${data.uploaded ?? 0} photo(s) uploaded.` });

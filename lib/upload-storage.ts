@@ -10,8 +10,10 @@ function uniqueId(): string {
 const DEFAULT_DIR = "uploads";
 
 function getUploadDir(): string {
-  const base = process.env.UPLOAD_DIR || join(process.cwd(), DEFAULT_DIR);
-  return base;
+  if (process.env.UPLOAD_DIR?.trim()) {
+    return process.env.UPLOAD_DIR.trim();
+  }
+  return join(process.cwd(), DEFAULT_DIR);
 }
 
 function useBlob(): boolean {
@@ -27,6 +29,11 @@ export async function saveJobPhoto(
   jobId: string,
   ext: string
 ): Promise<string> {
+  if (process.env.VERCEL && !useBlob()) {
+    throw new Error(
+      "Photo uploads on Vercel require BLOB_READ_WRITE_TOKEN. Add it in Project Settings → Environment Variables (Storage → Blob)."
+    );
+  }
   const safeExt = ext.replace(/[^a-zA-Z0-9]/g, "") || "jpg";
   const filename = `${uniqueId()}.${safeExt}`;
   const pathname = `jobs/${jobId}/${filename}`;

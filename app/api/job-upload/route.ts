@@ -85,8 +85,13 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ ok: true, uploaded: saved.length, media: saved });
   } catch (err) {
-    console.error("[job-upload] Error:", err);
-    return NextResponse.json({ error: "Failed to save photos" }, { status: 500 });
+    const e = err as NodeJS.ErrnoException & { code?: string };
+    console.error("[job-upload] Error:", e);
+    const isReadOnly = e?.code === "EROFS" || /read-only|EACCES|EPERM/i.test(String(e?.message ?? ""));
+    const message = isReadOnly
+      ? "Photo storage not configured. Add BLOB_READ_WRITE_TOKEN in Vercel project settings (Storage → Blob)."
+      : "Failed to save photos. Try again or use a smaller image.";
+    return NextResponse.json({ error: message }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }
