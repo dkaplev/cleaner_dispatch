@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import Link from "next/link";
-import { DashboardHeader } from "../../../dashboard-header";
+import { DashboardHeader } from "../../dashboard-header";
 import { ImportBookingForm } from "./import-booking-form";
 
 export default async function ImportBookingPage() {
