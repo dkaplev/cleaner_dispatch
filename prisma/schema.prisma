@@ -14,14 +14,15 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password_hash String
-  role          String
-  created_at    DateTime  @default(now())
-  properties    Property[]
-  cleaners      Cleaner[]
-  jobs          Job[]
+  id               String    @id @default(cuid())
+  email            String    @unique
+  password_hash    String
+  role             String
+  telegram_chat_id String?   // for landlord: receive job status updates in Telegram
+  created_at       DateTime  @default(now())
+  properties       Property[]
+  cleaners         Cleaner[]
+  jobs             Job[]
 
   @@map("users")
 }

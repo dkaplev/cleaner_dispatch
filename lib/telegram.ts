@@ -67,6 +67,37 @@ export async function sendTelegramOfferMessage(
 }
 
 /**
+ * Send a text message with a single URL button (e.g. "Upload photos" opening the upload page).
+ */
+export async function sendTelegramMessageWithUrlButton(
+  chatId: string,
+  text: string,
+  buttonText: string,
+  url: string
+): Promise<void> {
+  const token = getBotToken();
+  if (!token || !chatId?.trim()) return;
+
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId.trim(),
+      text,
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [[{ text: buttonText, url }]],
+      },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    console.error("Telegram sendMessage (with button) failed:", res.status, err);
+    throw new Error("Telegram send failed");
+  }
+}
+
+/**
  * Call answerCallbackQuery to dismiss the loading state after handling a button press.
  */
 export async function answerTelegramCallback(

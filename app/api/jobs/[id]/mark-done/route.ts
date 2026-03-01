@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { verifyUploadToken } from "@/lib/upload-token";
+import { notifyLandlordJobDone } from "@/lib/notify-landlord-telegram";
 
 const MIN_PHOTOS = 1;
 
@@ -61,6 +62,29 @@ export async function POST(
       where: { id: jobId },
       data: { status: "done_awaiting_review" },
     });
+
+    // Notify landlord via Telegram — critical so they know the property is ready for the next guest
+    try {
+      const jobWithLandlord = await prisma.job.findUnique({
+        where: { id: jobId },
+        select: {
+          property: { select: { name: true } },
+          landlord: { select: { telegram_chat_id: true } },
+          _count: { select: { job_media: true } },
+        },
+      });
+      if (jobWithLandlord?.landlord?.telegram_chat_id) {
+        await notifyLandlordJobDone(
+          jobWithLandlord.landlord.telegram_chat_id,
+          jobWithLandlord.property.name,
+          jobId,
+          jobWithLandlord._count.job_media
+        );
+      }
+    } catch (notifyErr) {
+      console.error("[mark-done] Failed to notify landlord via Telegram:", notifyErr);
+    }
+
     return NextResponse.json({ ok: true, message: "Job marked done. Landlord will review." });
   } catch (err) {
     console.error("[mark-done] Error:", err);

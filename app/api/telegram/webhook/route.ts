@@ -3,11 +3,17 @@ import { getPrisma } from "@/lib/prisma";
 import {
   answerTelegramCallback,
   sendTelegramMessage,
+  sendTelegramMessageWithUrlButton,
 } from "@/lib/telegram";
 import { dispatchJob } from "@/lib/dispatch";
 import { createUploadToken } from "@/lib/upload-token";
+import {
+  notifyLandlordJobAccepted,
+  notifyLandlordJobDeclined,
+} from "@/lib/notify-landlord-telegram";
 
-const PREFIX = "cleaner_";
+const PREFIX_CLEANER = "cleaner_";
+const PREFIX_LANDLORD = "landlord_";
 
 type TelegramUpdate = {
   update_id?: number;
@@ -68,15 +74,56 @@ export async function POST(request: Request) {
   const chatId = String(message.chat.id);
   const text = message.text.trim();
 
-  // Handle /start [payload] (e.g. from link https://t.me/Bot?start=cleaner_xxx)
+  // Handle /done — send upload link(s) for cleaner's active job(s)
+  if (text === "/done" || text.toLowerCase() === "/done") {
+    const handled = await handleDoneCommand(chatId);
+    return NextResponse.json({ ok: true });
+  }
+
+  // Handle /start [payload]: landlord_<userId> or cleaner_<cleanerId>
   if (!text.startsWith("/start")) {
     return NextResponse.json({ ok: true });
   }
 
   const parts = text.split(/\s+/);
-  const payload = parts[1]; // "cleaner_abc123" or undefined
-  if (!payload || !payload.startsWith(PREFIX)) {
-    console.log("[Telegram webhook] /start without cleaner_ payload, text:", text);
+  const payload = parts[1];
+
+  if (payload?.startsWith(PREFIX_LANDLORD)) {
+    const userId = payload.slice(PREFIX_LANDLORD.length);
+    if (!userId) return NextResponse.json({ ok: true });
+    let prisma;
+    try {
+      prisma = getPrisma();
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true },
+      });
+      if (!user) {
+        await sendTelegramMessage(chatId, "This link is invalid or has expired.");
+        return NextResponse.json({ ok: true });
+      }
+      await prisma.user.update({
+        where: { id: userId },
+        data: { telegram_chat_id: chatId },
+      });
+      await sendTelegramMessage(
+        chatId,
+        "✅ You're linked. You'll receive job updates here (accepted, declined, cleaning completed)."
+      );
+    } catch (e) {
+      console.error("[Telegram webhook] Landlord link error:", e);
+      try {
+        await sendTelegramMessage(chatId, "Something went wrong. Please try again from the dashboard.");
+      } catch (_e) {
+        // ignore
+      }
+    } finally {
+      if (prisma) await prisma.$disconnect();
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!payload || !payload.startsWith(PREFIX_CLEANER)) {
     try {
       await sendTelegramMessage(
         chatId,
@@ -88,7 +135,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const cleanerId = payload.slice(PREFIX.length);
+  const cleanerId = payload.slice(PREFIX_CLEANER.length);
   if (!cleanerId) {
     return NextResponse.json({ ok: true });
   }
@@ -152,6 +199,75 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * Handle /done: find cleaner by chat_id, find their active jobs (accepted/in_progress), send upload link(s).
+ */
+async function handleDoneCommand(chatId: string): Promise<boolean> {
+  let prisma;
+  try {
+    prisma = getPrisma();
+    const cleaner = await prisma.cleaner.findFirst({
+      where: { telegram_chat_id: chatId },
+      select: { id: true, name: true },
+    });
+    if (!cleaner) {
+      await sendTelegramMessage(
+        chatId,
+        "Your Telegram isn't linked to a cleaner account. Use the link from your landlord to link it."
+      );
+      return true;
+    }
+
+    const jobs = await prisma.job.findMany({
+      where: {
+        assigned_cleaner_id: cleaner.id,
+        status: { in: ["accepted", "in_progress"] },
+      },
+      select: {
+        id: true,
+        property: { select: { name: true } },
+        window_start: true,
+        window_end: true,
+      },
+      orderBy: { window_start: "asc" },
+    });
+
+    if (jobs.length === 0) {
+      await sendTelegramMessage(chatId, "You have no active cleaning jobs.");
+      return true;
+    }
+
+    const baseUrl = process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "";
+    if (!baseUrl) {
+      await sendTelegramMessage(chatId, "Upload link is not configured. Contact your landlord.");
+      return true;
+    }
+
+    for (const job of jobs) {
+      const uploadToken = createUploadToken(job.id, cleaner.id);
+      const uploadUrl = `${baseUrl}/job/${job.id}/upload?token=${encodeURIComponent(uploadToken)}`;
+      const windowStr = `${new Date(job.window_start).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} – ${new Date(job.window_end).toLocaleTimeString(undefined, { timeStyle: "short" })}`;
+      await sendTelegramMessageWithUrlButton(
+        chatId,
+        `📸 <b>${escapeHtml(job.property.name)}</b> — ${windowStr}\n\nUpload photos and mark the job as done:`,
+        "📸 Upload photos",
+        uploadUrl
+      );
+    }
+    return true;
+  } catch (e) {
+    console.error("[Telegram webhook] handleDoneCommand error:", e);
+    try {
+      await sendTelegramMessage(chatId, "Something went wrong. Please try again or contact your landlord.");
+    } catch (_e) {
+      // ignore
+    }
+    return true;
+  } finally {
+    if (prisma) await prisma.$disconnect();
+  }
+}
+
 async function handleOfferCallback(callbackQuery: {
   id: string;
   data?: string;
@@ -179,6 +295,7 @@ async function handleOfferCallback(callbackQuery: {
             status: true,
             landlord_id: true,
             assigned_cleaner_id: true,
+            property: { select: { name: true } },
           },
         },
         cleaner: { select: { id: true, name: true, telegram_chat_id: true } },
@@ -278,9 +395,11 @@ async function handleOfferCallback(callbackQuery: {
           if (baseUrl) {
             const uploadToken = createUploadToken(attempt.job.id, attempt.cleaner_id);
             const uploadUrl = `${baseUrl}/job/${attempt.job.id}/upload?token=${encodeURIComponent(uploadToken)}`;
-            await sendTelegramMessage(
+            await sendTelegramMessageWithUrlButton(
               chatId,
-              `When you're done, upload photos here:\n${uploadUrl}`
+              "When you're done, upload photos and mark the job as done:",
+              "📸 Upload photos",
+              uploadUrl
             );
           }
         } catch (e) {
@@ -299,6 +418,24 @@ async function handleOfferCallback(callbackQuery: {
           console.error("[Telegram webhook] Failed to notify other cleaner:", e);
         }
       }
+
+      // Notify landlord via Telegram so they feel in control
+      try {
+        const landlord = await prisma.user.findUnique({
+          where: { id: attempt.job.landlord_id },
+          select: { telegram_chat_id: true },
+        });
+        if (landlord?.telegram_chat_id) {
+          await notifyLandlordJobAccepted(
+            landlord.telegram_chat_id,
+            attempt.job.property.name,
+            attempt.cleaner.name,
+            attempt.job.id
+          );
+        }
+      } catch (e) {
+        console.error("[Telegram webhook] Failed to notify landlord (accept):", e);
+      }
     } else {
       await prisma.dispatchAttempt.update({
         where: { id: attempt.id },
@@ -314,13 +451,32 @@ async function handleOfferCallback(callbackQuery: {
       }
 
       // Try to offer the job to the next eligible cleaner (fallback routing)
+      let nextCleanerName: string | undefined;
       try {
         const result = await dispatchJob(prisma, attempt.job.id);
-        if (!result.success) {
-          console.warn("[Telegram webhook] No fallback cleaner available:", result.error);
-        }
+        if (result.success) nextCleanerName = result.attempt.cleaner_name;
+        else console.warn("[Telegram webhook] No fallback cleaner available:", result.error);
       } catch (e) {
         console.error("[Telegram webhook] Failed to dispatch to fallback cleaner:", e);
+      }
+
+      // Notify landlord via Telegram
+      try {
+        const landlord = await prisma.user.findUnique({
+          where: { id: attempt.job.landlord_id },
+          select: { telegram_chat_id: true },
+        });
+        if (landlord?.telegram_chat_id) {
+          await notifyLandlordJobDeclined(
+            landlord.telegram_chat_id,
+            attempt.job.property.name,
+            attempt.cleaner.name,
+            attempt.job.id,
+            nextCleanerName
+          );
+        }
+      } catch (e) {
+        console.error("[Telegram webhook] Failed to notify landlord (decline):", e);
       }
     }
     return true;

@@ -1,12 +1,32 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getPrisma } from "@/lib/prisma";
 import { DashboardHeader } from "./dashboard-header";
+import { LandlordTelegramLink } from "./landlord-telegram-link";
 import { TelegramTest } from "./telegram-test";
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
+
+  let telegramChatId: string | null = null;
+  try {
+    const prisma = getPrisma();
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, telegram_chat_id: true },
+    });
+    telegramChatId = user?.telegram_chat_id ?? null;
+  } catch {
+    // ignore
+  }
+
+  const botUsername = process.env.TELEGRAM_BOT_USERNAME?.trim();
+  const landlordLink =
+    botUsername && session.user.id
+      ? `https://t.me/${botUsername.replace(/^@/, "")}?start=landlord_${session.user.id}`
+      : null;
 
   return (
     <div className="min-h-screen bg-zinc-50 p-6">
@@ -17,6 +37,11 @@ export default async function DashboardPage() {
           <p className="mt-2 text-zinc-600">
             You’re signed in as <strong>{session.user.email}</strong>. This is your protected dashboard.
           </p>
+          <LandlordTelegramLink
+            botUsername={botUsername ?? undefined}
+            landlordLink={landlordLink}
+            isLinked={!!telegramChatId}
+          />
           <ul className="mt-6 space-y-2">
             <li>
               <Link
