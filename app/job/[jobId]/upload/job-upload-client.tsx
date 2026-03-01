@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { upload } from "@vercel/blob/client";
+import { compressImageForUpload, compressedPhotoPathname } from "@/lib/compress-image-client";
 
 export function JobUploadClient({ token, jobId }: { token: string; jobId: string }) {
   const [uploading, setUploading] = useState(false);
@@ -14,32 +16,41 @@ export function JobUploadClient({ token, jobId }: { token: string; jobId: string
       setMessage({ type: "err", text: "Select at least one photo." });
       return;
     }
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const files = Array.from(fileList).filter((f) => allowedTypes.includes(f.type));
+    if (files.length === 0) {
+      setMessage({ type: "err", text: "No valid photo (use JPEG, PNG, WebP or GIF)." });
+      return;
+    }
     setMessage(null);
     setUploading(true);
+    let ok = 0;
+    let errMsg: string | null = null;
     try {
-      const formData = new FormData();
-      for (let i = 0; i < fileList.length; i++) {
-        formData.append("photos", fileList[i]);
+      for (const file of files) {
+        const pathname = compressedPhotoPathname(jobId, file.name);
+        const compressed = await compressImageForUpload(file);
+        try {
+          await upload(pathname, compressed, {
+            access: "public",
+            handleUploadUrl: "/api/job-upload-blob",
+            clientPayload: token,
+            contentType: "image/jpeg",
+          });
+          ok += 1;
+        } catch (err) {
+          errMsg = err instanceof Error ? err.message : "Upload failed";
+          break;
+        }
       }
-      const res = await fetch(`/api/job-upload?token=${encodeURIComponent(token)}`, {
-        method: "POST",
-        body: formData,
-      });
-      let data: { error?: string; uploaded?: number } = {};
-      try {
-        const text = await res.text();
-        if (text) data = JSON.parse(text) as { error?: string; uploaded?: number };
-      } catch {
-        // non-JSON response (e.g. 500 error page)
+      if (errMsg) {
+        setMessage({ type: "err", text: errMsg });
+      } else {
+        setMessage({ type: "ok", text: `${ok} photo(s) uploaded.` });
+        setFileList(null);
+        const input = document.getElementById("photos") as HTMLInputElement;
+        if (input) input.value = "";
       }
-      if (!res.ok) {
-        setMessage({ type: "err", text: data.error || `Upload failed (${res.status})` });
-        return;
-      }
-      setMessage({ type: "ok", text: `${data.uploaded ?? 0} photo(s) uploaded.` });
-      setFileList(null);
-      const input = document.getElementById("photos") as HTMLInputElement;
-      if (input) input.value = "";
     } finally {
       setUploading(false);
     }
