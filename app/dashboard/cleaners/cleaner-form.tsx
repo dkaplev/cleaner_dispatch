@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -28,6 +29,12 @@ export function CleanerForm(props: Props) {
   const [notes, setNotes] = useState(isEdit ? props.initialNotes : "");
   const [isActive, setIsActive] = useState(isEdit ? props.initialIsActive : true);
   const [linkCopied, setLinkCopied] = useState(false);
+
+  // Sync Telegram ID field when server sends updated data (e.g. after "Refresh status" when cleaner linked via Telegram)
+  const initialTelegram = isEdit && props.action === "edit" ? props.initialTelegramChatId : "";
+  useEffect(() => {
+    if (isEdit) setTelegramChatId(initialTelegram);
+  }, [isEdit, initialTelegram]);
 
   const telegramBotLink = "https://t.me/userinfobot";
   async function copyBotLink() {
