@@ -10,6 +10,9 @@ type Cleaner = {
   telegram_chat_id: string | null;
   notes: string | null;
   is_active: boolean;
+  avg_rating: number | null;
+  completed_count: number;
+  acceptance_rate: number | null;
 };
 
 export function CleanerList({ initialCleaners }: { initialCleaners: Cleaner[] }) {
@@ -49,6 +52,9 @@ export function CleanerList({ initialCleaners }: { initialCleaners: Cleaner[] })
           <tr>
             <th className="px-4 py-3 font-medium text-zinc-700">Name</th>
             <th className="px-4 py-3 font-medium text-zinc-700">Telegram</th>
+            <th className="px-4 py-3 font-medium text-zinc-700">Rating</th>
+            <th className="px-4 py-3 font-medium text-zinc-700">Completed</th>
+            <th className="px-4 py-3 font-medium text-zinc-700">Accept rate</th>
             <th className="px-4 py-3 font-medium text-zinc-700">Status</th>
             <th className="px-4 py-3 font-medium text-zinc-700 max-w-xs">Notes</th>
             <th className="w-32 px-4 py-3 font-medium text-zinc-700">Actions</th>
@@ -60,6 +66,13 @@ export function CleanerList({ initialCleaners }: { initialCleaners: Cleaner[] })
               <td className="px-4 py-3 font-medium text-zinc-900">{c.name}</td>
               <td className="px-4 py-3 text-zinc-600">
                 {c.telegram_chat_id || "—"}
+              </td>
+              <td className="px-4 py-3 text-zinc-600">
+                {c.avg_rating != null ? `${c.avg_rating.toFixed(1)} ★` : "—"}
+              </td>
+              <td className="px-4 py-3 text-zinc-600">{c.completed_count}</td>
+              <td className="px-4 py-3 text-zinc-600">
+                {c.acceptance_rate != null ? `${c.acceptance_rate}%` : "—"}
               </td>
               <td className="px-4 py-3">
                 <span

@@ -10,6 +10,7 @@ type Job = {
   window_end: string;
   status: string;
   booking_id: string | null;
+  reminder_sent_at: string | null;
   property: { id: string; name: string };
   assigned_cleaner: { id: string; name: string } | null;
   offered_to_cleaner_name: string | null;
@@ -31,6 +32,7 @@ export function JobList({ initialJobs }: { initialJobs: Job[] }) {
   const [jobs, setJobs] = useState(initialJobs);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [dispatchingId, setDispatchingId] = useState<string | null>(null);
+  const [remindingId, setRemindingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
 
   const filteredJobs =
@@ -62,6 +64,26 @@ export function JobList({ initialJobs }: { initialJobs: Job[] }) {
       );
     } finally {
       setDispatchingId(null);
+    }
+  }
+
+  async function handleSendReminder(id: string) {
+    setRemindingId(id);
+    try {
+      const res = await fetch(`/api/jobs/${id}/send-reminder`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || "Failed to send reminder");
+        return;
+      }
+      router.refresh();
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === id ? { ...j, reminder_sent_at: new Date().toISOString() } : j
+        )
+      );
+    } finally {
+      setRemindingId(null);
     }
   }
 
@@ -183,6 +205,17 @@ export function JobList({ initialJobs }: { initialJobs: Job[] }) {
                       {dispatchingId === j.id ? "Sending…" : "Offer to cleaner"}
                     </button>
                   )}
+                  {(j.status === "accepted" || j.status === "in_progress") &&
+                    !j.reminder_sent_at && (
+                      <button
+                        type="button"
+                        onClick={() => handleSendReminder(j.id)}
+                        disabled={remindingId === j.id}
+                        className="mr-3 text-amber-600 underline hover:no-underline disabled:opacity-50"
+                      >
+                        {remindingId === j.id ? "Sending…" : "Send reminder"}
+                      </button>
+                    )}
                   <Link
                     href={`/dashboard/jobs/${j.id}/edit`}
                     className="mr-3 text-zinc-700 underline hover:no-underline"

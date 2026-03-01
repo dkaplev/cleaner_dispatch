@@ -15,6 +15,7 @@ export default async function JobsPage() {
     window_end: Date;
     status: string;
     booking_id: string | null;
+    reminder_sent_at: Date | null;
     property: { id: string; name: string };
     assigned_cleaner: { id: string; name: string } | null;
     dispatch_attempts: { offer_status: string; cleaner: { name: string } }[];
@@ -45,6 +46,7 @@ export default async function JobsPage() {
       ...j,
       window_start: j.window_start.toISOString(),
       window_end: j.window_end.toISOString(),
+      reminder_sent_at: j.reminder_sent_at?.toISOString() ?? null,
       cleaners_considering: considering,
       offered_to_cleaner_name:
         j.status === "offered" && latestAttempt ? latestAttempt.cleaner.name : null,

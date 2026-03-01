@@ -5,6 +5,7 @@ import {
   sendTelegramMessage,
 } from "@/lib/telegram";
 import { dispatchJob } from "@/lib/dispatch";
+import { createUploadToken } from "@/lib/upload-token";
 
 const PREFIX = "cleaner_";
 
@@ -264,6 +265,15 @@ async function handleOfferCallback(callbackQuery: {
             chatId,
             `✅ You accepted the job. We'll send a reminder before the cleaning window.`
           );
+          const baseUrl = process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "";
+          if (baseUrl) {
+            const uploadToken = createUploadToken(attempt.job.id, attempt.cleaner_id);
+            const uploadUrl = `${baseUrl}/job/${attempt.job.id}/upload?token=${encodeURIComponent(uploadToken)}`;
+            await sendTelegramMessage(
+              chatId,
+              `When you're done, upload photos here:\n${uploadUrl}`
+            );
+          }
         } catch (e) {
           console.error("[Telegram webhook] Failed to send accept confirmation:", e);
         }

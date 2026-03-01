@@ -66,6 +66,8 @@ model Cleaner {
   assigned_jobs    Job[]              @relation("AssignedCleaner")
   property_cleaners PropertyCleaner[]
   dispatch_attempts DispatchAttempt[]
+  job_media        JobMedia[]
+  reviews          Review[]
 
   @@map("cleaners")
 }
@@ -97,8 +99,11 @@ model Job {
   status               String             @default("new") // new | offered | accepted | in_progress | done_awaiting_review | completed | cancelled
   assigned_cleaner_id  String?
   assigned_cleaner     Cleaner?           @relation("AssignedCleaner", fields: [assigned_cleaner_id], references: [id], onDelete: SetNull)
+  reminder_sent_at     DateTime?          // when we sent the "job tomorrow" reminder via Telegram
   created_at           DateTime           @default(now())
   dispatch_attempts    DispatchAttempt[]
+  job_media            JobMedia[]
+  review               Review?
 
   @@map("jobs")
 }
@@ -134,4 +139,33 @@ model DispatchAttempt {
   created_at    DateTime  @default(now())
 
   @@map("dispatch_attempts")
+}
+
+// Photos uploaded by cleaner when completing a job
+model JobMedia {
+  id          String   @id @default(cuid())
+  job_id      String
+  job         Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  cleaner_id  String
+  cleaner     Cleaner  @relation(fields: [cleaner_id], references: [id], onDelete: Cascade)
+  photo_url   String   // path or URL to stored file
+  uploaded_at DateTime @default(now())
+
+  @@map("job_media")
+}
+
+// Landlord review of cleaner after job is done
+model Review {
+  id           String   @id @default(cuid())
+  job_id       String
+  job          Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  cleaner_id    String
+  cleaner      Cleaner  @relation(fields: [cleaner_id], references: [id], onDelete: Cascade)
+  rating_1_5    Int      // 1-5 stars
+  tags_json    String?  // JSON array of tags, e.g. ["late", "low_quality", "missing_photos", "communication"]
+  comment_optional String?
+  created_at   DateTime @default(now())
+
+  @@unique([job_id])
+  @@map("reviews")
 }

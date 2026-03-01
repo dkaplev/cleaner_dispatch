@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { DashboardHeader } from "../../../dashboard-header";
 import { JobEditForm } from "../../job-edit-form";
+import { JobReviewForm } from "../../job-review-form";
 
 function toLocalDatetimeLocal(d: Date) {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
@@ -28,6 +29,8 @@ export default async function EditJobPage({
     assigned_cleaner_id: string | null;
     property: { id: string; name: string };
     assigned_cleaner: { id: string; name: string } | null;
+    review: { rating_1_5: number; tags_json: string | null; comment_optional: string | null } | null;
+    job_media: { id: string }[];
   } | null = null;
   let cleaners: { id: string; name: string }[] = [];
   try {
@@ -38,6 +41,10 @@ export default async function EditJobPage({
         include: {
           property: { select: { id: true, name: true } },
           assigned_cleaner: { select: { id: true, name: true } },
+          review: {
+            select: { rating_1_5: true, tags_json: true, comment_optional: true },
+          },
+          job_media: { select: { id: true } },
         },
       }),
       prisma.cleaner.findMany({
@@ -51,6 +58,9 @@ export default async function EditJobPage({
   }
 
   if (!job) redirect("/dashboard/jobs");
+
+  const showReviewForm =
+    job.status === "done_awaiting_review" && !job.review && job.assigned_cleaner;
 
   return (
     <div className="min-h-screen bg-zinc-50 p-6">
@@ -68,6 +78,19 @@ export default async function EditJobPage({
           initialAssignedCleanerId={job.assigned_cleaner_id}
           cleaners={cleaners}
         />
+        {showReviewForm && job.assigned_cleaner && (
+          <JobReviewForm
+            jobId={job.id}
+            cleanerName={job.assigned_cleaner.name}
+            media={job.job_media}
+          />
+        )}
+        {job.status === "done_awaiting_review" && job.review && (
+          <p className="mt-6 text-sm text-zinc-600">
+            You already submitted a review ({job.review.rating_1_5}/5). Save the job with status
+            &quot;completed&quot; if it is not yet.
+          </p>
+        )}
       </main>
     </div>
   );

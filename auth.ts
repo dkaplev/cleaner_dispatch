@@ -18,6 +18,7 @@ if (!secret) {
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   secret,
+  trustHost: true, // Use request host for redirects so sign-in stays on cleaner-dispatch.vercel.app
   providers: [
     Credentials({
       name: "credentials",
