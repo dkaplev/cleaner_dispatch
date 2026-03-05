@@ -6,6 +6,13 @@ import { useState } from "react";
 
 const SYSTEM_CHOOSE = "";
 
+const INGEST_SAMPLES = [
+  { value: "", label: "Load sample…" },
+  { value: "airbnb", label: "Airbnb" },
+  { value: "booking_com", label: "Booking.com" },
+  { value: "vrbo", label: "VRBO" },
+] as const;
+
 type Property = { id: string; name: string };
 type Cleaner = { id: string; name: string };
 
@@ -31,6 +38,34 @@ export function ImportBookingForm({ properties, cleaners }: Props) {
   const [parsing, setParsing] = useState(false);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<ParsedPreview | null>(null);
+  const [loadingSample, setLoadingSample] = useState(false);
+  const [sampleSelect, setSampleSelect] = useState("");
+
+  async function handleLoadSample(sampleKey: string) {
+    if (!sampleKey) return;
+    setSampleSelect(sampleKey);
+    setLoadingSample(true);
+    setError("");
+    setPreview(null);
+    try {
+      const res = await fetch(`/ingest-samples/${sampleKey}.txt`);
+      if (!res.ok) throw new Error("Sample not found");
+      const sampleText = await res.text();
+      setText(sampleText);
+      const parseRes = await fetch("/api/ingest/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: sampleText }),
+      });
+      const data = await parseRes.json().catch(() => ({}));
+      setPreview(data.parsed ?? null);
+    } catch {
+      setError("Could not load sample.");
+    } finally {
+      setLoadingSample(false);
+      setSampleSelect("");
+    }
+  }
 
   async function handleParse() {
     if (!text.trim()) {
@@ -122,9 +157,26 @@ export function ImportBookingForm({ properties, cleaners }: Props) {
       )}
 
       <div>
-        <label htmlFor="pasted_text" className="block text-sm font-medium text-zinc-700">
-          Paste booking confirmation or email *
-        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="pasted_text" className="block text-sm font-medium text-zinc-700">
+            Paste booking confirmation or email *
+          </label>
+          <span className="text-zinc-400">|</span>
+          <select
+            aria-label="Load sample letter"
+            value={sampleSelect}
+            onChange={(e) => handleLoadSample(e.target.value)}
+            disabled={loadingSample}
+            className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-600 disabled:opacity-50"
+          >
+            {INGEST_SAMPLES.map((s) => (
+              <option key={s.value || "none"} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          {loadingSample && <span className="text-sm text-zinc-500">Loading…</span>}
+        </div>
         <textarea
           id="pasted_text"
           rows={6}

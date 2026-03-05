@@ -1,0 +1,57 @@
+Booking.com
+Partner Services | Property Reservation Notification
+Date: 14 May 2025
+Dear Property Partner,
+We are pleased to inform you that a new reservation has been confirmed for your property listed on Booking.com. Please review the booking details below and ensure the property is prepared accordingly.
+RESERVATION DETAILS
+Booking Reference
+BDC-2025-7841936
+Property Name
+Sunset Villa Paphos
+Property ID
+12847563
+Guest Name
+Mr. James R. Thompson
+Number of Guests
+2 Adults, 1 Child
+Check-in Date
+Saturday, 7 June 2025
+Check-out Date
+Saturday, 14 June 2025
+Duration
+7 nights
+Room / Unit
+Entire Villa (3 bedrooms)
+Booking Date
+14 May 2025 at 09:47 (CET)
+Meal Plan
+Self-catering (no meals included)
+Special Requests
+Late check-in after 22:00. Baby cot required.
+PAYMENT DETAILS
+Total Booking Value
+EUR 1,540.00
+Booking.com Commission (15%)
+EUR 231.00
+Amount Payable to Partner
+EUR 1,309.00
+Payment Method
+Collected by Property (on arrival)
+Payment Status
+CONFIRMED — Awaiting Guest Payment
+Guest Contact Information
+Guest Email
+j.thompson@email.com
+Guest Phone
++44 7700 900 412
+Nationality
+British
+Language
+English
+Important Reminders
+Please ensure the property is clean and fully prepared prior to the guest&apos;s check-in time. If you are unable to accommodate this booking for any reason, notify us immediately via your Extranet dashboard to avoid penalties. Late cancellations by the property may affect your performance score.
+For any amendments to this reservation, please log in to your Booking.com Extranet at partner.booking.com or contact our Partner Support line.
+Thank you for being a valued Booking.com partner.
+Booking.com Partner Services Team
+partner.booking.com  |  support@booking.com  |  +31 20 712 5000
+Booking.com B.V., Herengracht 597, 1017 CE Amsterdam, The Netherlands

@@ -102,19 +102,32 @@ export function parseBookingText(text: string): ParsedBooking {
   // Common labels (case-insensitive)
   const checkoutLabels = /check\s*[- ]?out|departure|leave|vacate/i;
   const checkinLabels = /check\s*[- ]?in|arrival|arrive/i;
-  const reservationId = /(?:reservation|booking|confirmation)\s*(?:id|#|number)?\s*[:\s]*([A-Za-z0-9\-]+)/i;
+  const reservationId = /(?:reservation|booking|confirmation)\s*(?:id|#|number|reference|code)?\s*[:\s]*([A-Za-z0-9\-]{5,})/i;
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (checkoutLabels.test(line)) {
       const datePart = line.replace(checkoutLabels, "").replace(/[:\s]+/, " ").trim();
       const t = parseTime(datePart);
       if (t) checkoutTime = t;
       const d = parseDate(datePart) || parseDate(line);
       if (d) checkoutDate = d;
+      // Many platforms put date on the next line (e.g. "Check-out" then "Monday, 30 June 2025 (before 11:00)")
+      if (!d && i + 1 < lines.length) {
+        const next = lines[i + 1];
+        const nextDate = parseDate(next);
+        if (nextDate) checkoutDate = nextDate;
+        const nextTime = parseTime(next);
+        if (nextTime) checkoutTime = nextTime;
+      }
     }
     if (checkinLabels.test(line) && !checkoutDate) {
       const d = parseDate(line);
       if (d) checkinDate = d;
+      if (!d && i + 1 < lines.length) {
+        const nextDate = parseDate(lines[i + 1]);
+        if (nextDate) checkinDate = nextDate;
+      }
     }
     const rid = line.match(reservationId);
     if (rid && !bookingId) bookingId = rid[1];
