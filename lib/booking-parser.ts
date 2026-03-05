@@ -16,12 +16,20 @@ export type ParsedBooking = {
   bookingId: string | null;
 };
 
-function stripHtml(html: string): string {
-  return html
+function stripHtml(input: string): string {
+  // Plain text (no tags): preserve line structure as-is
+  if (!/<[a-zA-Z]/.test(input)) return input;
+  // HTML: convert block-level elements to newlines first, then strip all remaining tags
+  return input
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<\/?(br|p|div|tr|td|th|li|h[1-6])\b[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
+    // Normalize spaces within each line but preserve line breaks
+    .split("\n")
+    .map((l) => l.replace(/[ \t]+/g, " ").trim())
+    .filter((l) => l.length > 0)
+    .join("\n")
     .trim();
 }
 
