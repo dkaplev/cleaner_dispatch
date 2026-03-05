@@ -101,17 +101,17 @@ function isBlacklistedDateLine(line: string): boolean {
   );
 }
 
-/** True if this line is ONLY a checkout/departure label (no date on it). */
+/** True if this line is ONLY a checkout/departure label (no calendar date on it; we'll use next line for date). */
 function isCheckoutLabelOnly(line: string): boolean {
   const t = line.trim().toLowerCase();
   if (!t) return false;
   const withoutLabel = t
-    .replace(/check\s*[- ]?out\s*(date)?\s*$/, "")
-    .replace(/^departure\s*(date)?\s*$/, "")
-    .replace(/\bleave\s*$/i, "")
-    .replace(/\bvacate\s*$/i, "")
+    .replace(/^check\s*[- ]?out\s*(date)?\s*$/i, "")
+    .replace(/^departure\s*(date)?\s*$/i, "")
+    .replace(/^leave\s*$/i, "")
+    .replace(/^vacate\s*$/i, "")
     .trim();
-  return withoutLabel.length === 0 || withoutLabel === "date";
+  return withoutLabel.length === 0;
 }
 
 /** True if this line is a checkout/departure label (may have date on same line). */
@@ -124,11 +124,11 @@ function isCheckoutLabel(line: string): boolean {
 function isCheckinLabelOnly(line: string): boolean {
   const t = line.trim().toLowerCase();
   const withoutLabel = t
-    .replace(/check\s*[- ]?in\s*(date)?\s*$/, "")
-    .replace(/^arrival\s*(date)?\s*$/, "")
-    .replace(/^arrive\s*$/, "")
+    .replace(/^check\s*[- ]?in\s*(date)?\s*$/i, "")
+    .replace(/^arrival\s*(date)?\s*$/i, "")
+    .replace(/^arrive\s*$/i, "")
     .trim();
-  return withoutLabel.length === 0 || withoutLabel === "date";
+  return withoutLabel.length === 0;
 }
 
 function isCheckinLabel(line: string): boolean {
@@ -167,15 +167,17 @@ export function parseBookingText(text: string): ParsedBooking {
   let bookingId: string | null = null;
 
   // —— 1) Check-out: find a line that is strictly "Check-out" / "Check-out Date" / "Departure" / "Departure Date"
-  //    Then take date (and time) ONLY from the next line if label has no date, else from same line.
-  //    The date line must contain a month name and must NOT be blacklisted.
+  //    Then take date (and time) from the next line(s). Skip a lone "Date" line if present.
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!isCheckoutLabel(line)) continue;
 
     let dateLine: string;
-    if (isCheckoutLabelOnly(line) && i + 1 < lines.length) {
-      dateLine = lines[i + 1];
+    if (isCheckoutLabelOnly(line)) {
+      let next = i + 1;
+      while (next < lines.length && lines[next].trim().toLowerCase() === "date") next++;
+      if (next < lines.length) dateLine = lines[next];
+      else continue;
     } else {
       dateLine = line;
     }
@@ -190,13 +192,16 @@ export function parseBookingText(text: string): ParsedBooking {
     break;
   }
 
-  // —— 2) Check-in: same idea, only from "Check-in" / "Arrival" and next line or same line
+  // —— 2) Check-in: same idea; skip a lone "Date" line if present
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!isCheckinLabel(line)) continue;
     let dateLine: string;
-    if (isCheckinLabelOnly(line) && i + 1 < lines.length) {
-      dateLine = lines[i + 1];
+    if (isCheckinLabelOnly(line)) {
+      let next = i + 1;
+      while (next < lines.length && lines[next].trim().toLowerCase() === "date") next++;
+      if (next < lines.length) dateLine = lines[next];
+      else continue;
     } else {
       dateLine = line;
     }
