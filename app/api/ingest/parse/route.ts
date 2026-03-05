@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       checkoutDate: parsed.checkoutDate?.toISOString() ?? null,
       checkinDate: parsed.checkinDate?.toISOString() ?? null,
       checkoutTime: parsed.checkoutTime,
-      propertyHint: parsed.propertyHint,
+      propertyName: parsed.propertyName,
       bookingId: parsed.bookingId,
     },
   });

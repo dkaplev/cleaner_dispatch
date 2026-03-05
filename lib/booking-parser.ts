@@ -1,7 +1,14 @@
 /**
  * Parse booking confirmation text (e.g. from forwarded email) to extract
- * check-in/check-out dates and optional property hint.
- * Used by Import booking (paste) and later by email ingest webhook.
+ * check-out/check-in dates, property name (per channel), and booking/reference ID.
+ * Used by Import booking (paste) and email ingest webhook.
+ *
+ * Rules:
+ * - Check-out/check-in come only from lines explicitly labeled (Check-out, Departure, Check-in, Arrival).
+ *   Never use "Booking Date", "Date:", "Booked On", "Reservation Created" for checkout.
+ * - Reservation/booking ID: prefer value on the next line after "Booking Reference", "Confirmation Code", "Reservation ID".
+ *   Reject junk words (Notification, Date, Partner, etc.).
+ * - Property name: take the line after "Property Name", "Listing Name", "Listing" for channel→property mapping.
  */
 
 export type ParsedBooking = {
@@ -9,11 +16,11 @@ export type ParsedBooking = {
   checkoutDate: Date | null;
   /** Check-in date (next guest arrives) — optional. */
   checkinDate: Date | null;
-  /** Time on checkout day (e.g. 11:00) if found; otherwise null → use property default. */
+  /** Time on checkout day (e.g. 11:00) if found on the same line as checkout; otherwise null → use property default. */
   checkoutTime: { hours: number; minutes: number } | null;
-  /** Best-effort property/listing name from subject or body. */
-  propertyHint: string | null;
-  /** Raw reservation/confirmation ID if found. */
+  /** Property/listing name as shown by the channel (for mapping to our property). */
+  propertyName: string | null;
+  /** Raw reservation/booking reference if found (e.g. BDC-2025-7841936, HMXZ4R8K2). */
   bookingId: string | null;
 };
 
@@ -35,7 +42,6 @@ function parseDate(str: string): Date | null {
     const d = new Date(parseInt(iso[1], 10), parseInt(iso[2], 10) - 1, parseInt(iso[3], 10));
     return Number.isNaN(d.getTime()) ? null : d;
   }
-  // 16 March 2025, 16 Mar 2025, March 16 2025
   const months: Record<string, number> = {
     jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
     may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7, sep: 8, sept: 8, september: 8,
@@ -58,16 +64,13 @@ function parseDate(str: string): Date | null {
     const d = new Date(year, month, day);
     return Number.isNaN(d.getTime()) ? null : d;
   }
-  // DD/MM/YYYY or MM/DD/YYYY (prefer DD/MM when day <= 12)
   const slash = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s);
   if (slash) {
     const a = parseInt(slash[1], 10);
     const b = parseInt(slash[2], 10);
     const y = parseInt(slash[3], 10);
     const dayFirst = a >= 1 && a <= 31 && b >= 1 && b <= 12;
-    const d = dayFirst
-      ? new Date(y, b - 1, a)
-      : new Date(y, a - 1, b);
+    const d = dayFirst ? new Date(y, b - 1, a) : new Date(y, a - 1, b);
     return Number.isNaN(d.getTime()) ? null : d;
   }
   return null;
@@ -85,9 +88,58 @@ function parseTime(str: string): { hours: number; minutes: number } | null {
   return { hours: h, minutes: min };
 }
 
-/**
- * Extract checkout date/time and optional property hint from email or pasted text.
- */
+/** True if the line is a document/metadata date (e.g. "Date: 14 May 2025", "Booking Date", "Booked On") — never use for checkout. */
+function isDocumentDateLine(line: string): boolean {
+  const t = line.toLowerCase().trim();
+  return (
+    /^(date|booking date|booked on|reservation created)\s*[:]?\s*/i.test(t) ||
+    /^date:\s*\d/i.test(t)
+  );
+}
+
+/** True if the line looks like a stay date (check-out/check-in), not a "when the booking was made" date. */
+function looksLikeStayDateLine(line: string): boolean {
+  if (isDocumentDateLine(line)) return false;
+  const d = parseDate(line);
+  return d !== null && d >= new Date();
+}
+
+/** True if the line is only a checkout/check-in label with no date on it (so we use next line). */
+function isOnlyCheckoutLabel(line: string): boolean {
+  const trimmed = line.trim();
+  if (!/check\s*[- ]?out|departure|leave|vacate/i.test(trimmed)) return false;
+  const afterLabel = trimmed.replace(/check\s*[- ]?out|departure|leave|vacate/i, "").replace(/date\s*$/i, "").trim();
+  return afterLabel.length < 5 || parseDate(afterLabel) === null;
+}
+
+function isOnlyCheckinLabel(line: string): boolean {
+  const trimmed = line.trim();
+  if (!/check\s*[- ]?in|arrival|arrive/i.test(trimmed)) return false;
+  const afterLabel = trimmed.replace(/check\s*[- ]?in|arrival|arrive/i, "").replace(/date\s*$/i, "").trim();
+  return afterLabel.length < 5 || parseDate(afterLabel) === null;
+}
+
+/** Labels for reservation/booking ID when value is typically on the next line. */
+const BOOKING_ID_LABELS = /^(?:booking\s+reference|confirmation\s+code|reservation\s+id|confirmation\s+id)\s*$/i;
+
+/** Reject captured "IDs" that are just common words. */
+const JUNK_ID_WORDS = new Set(
+  "notification date partner code name id team services details reminder".split(" ")
+);
+
+function looksLikeBookingId(value: string): boolean {
+  const v = value.trim();
+  if (v.length < 5) return false;
+  if (JUNK_ID_WORDS.has(v.toLowerCase())) return false;
+  if (/^\d+$/.test(v)) return true;
+  if (/\d/.test(v) && /^[A-Za-z0-9\-]+$/.test(v)) return true;
+  if (v.length >= 8 && /^[A-Za-z0-9\-]+$/.test(v)) return true;
+  return false;
+}
+
+/** Labels for property/listing name when value is on the next line. */
+const PROPERTY_NAME_LABELS = /^(?:property\s+name|listing\s+name|listing|accommodation)\s*$/i;
+
 export function parseBookingText(text: string): ParsedBooking {
   const raw = typeof text === "string" ? text : "";
   const plain = stripHtml(raw);
@@ -96,46 +148,60 @@ export function parseBookingText(text: string): ParsedBooking {
   let checkoutDate: Date | null = null;
   let checkinDate: Date | null = null;
   let checkoutTime: { hours: number; minutes: number } | null = null;
-  let propertyHint: string | null = null;
+  let propertyName: string | null = null;
   let bookingId: string | null = null;
 
-  // Common labels (case-insensitive)
-  const checkoutLabels = /check\s*[- ]?out|departure|leave|vacate/i;
-  const checkinLabels = /check\s*[- ]?in|arrival|arrive/i;
-  const reservationId = /(?:reservation|booking|confirmation)\s*(?:id|#|number|reference|code)?\s*[:\s]*([A-Za-z0-9\-]{5,})/i;
+  const checkoutLabel = /check\s*[- ]?out|departure|leave|vacate/i;
+  const checkinLabel = /check\s*[- ]?in|arrival|arrive/i;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (checkoutLabels.test(line)) {
-      const datePart = line.replace(checkoutLabels, "").replace(/[:\s]+/, " ").trim();
-      const t = parseTime(datePart);
-      if (t) checkoutTime = t;
-      const d = parseDate(datePart) || parseDate(line);
-      if (d) checkoutDate = d;
-      // Many platforms put date on the next line (e.g. "Check-out" then "Monday, 30 June 2025 (before 11:00)")
-      if (!d && i + 1 < lines.length) {
-        const next = lines[i + 1];
-        const nextDate = parseDate(next);
-        if (nextDate) checkoutDate = nextDate;
-        const nextTime = parseTime(next);
-        if (nextTime) checkoutTime = nextTime;
+    const nextLine = i + 1 < lines.length ? lines[i + 1] : "";
+
+    // —— Check-out: only from explicit checkout lines; never from "Booking Date" / "Date:" / "Booked On"
+    if (checkoutLabel.test(line) && !isDocumentDateLine(line)) {
+      const datePart = line.replace(checkoutLabel, "").replace(/\bdate\s*$/i, "").replace(/[:\s]+/, " ").trim();
+      let d = parseDate(datePart) || parseDate(line);
+      let t: { hours: number; minutes: number } | null = parseTime(datePart) || parseTime(line);
+      if (!d && isOnlyCheckoutLabel(line) && nextLine && looksLikeStayDateLine(nextLine)) {
+        d = parseDate(nextLine);
+        if (!t) t = parseTime(nextLine);
+      }
+      if (d) {
+        checkoutDate = d;
+        if (t) checkoutTime = t;
       }
     }
-    if (checkinLabels.test(line) && !checkoutDate) {
-      const d = parseDate(line);
+
+    // —— Check-in: only from explicit check-in lines (for display; we use checkout for the job window)
+    if (checkinLabel.test(line) && !isDocumentDateLine(line)) {
+      let d = parseDate(line.replace(checkinLabel, "").replace(/\bdate\s*$/i, "").trim()) || parseDate(line);
+      if (!d && isOnlyCheckinLabel(line) && nextLine && looksLikeStayDateLine(nextLine)) {
+        d = parseDate(nextLine);
+      }
       if (d) checkinDate = d;
-      if (!d && i + 1 < lines.length) {
-        const nextDate = parseDate(lines[i + 1]);
-        if (nextDate) checkinDate = nextDate;
-      }
     }
-    const rid = line.match(reservationId);
-    if (rid && !bookingId) bookingId = rid[1];
+
+    // —— Booking/Reservation ID: label on one line, value on next (e.g. "Booking Reference" → "BDC-2025-7841936")
+    if (BOOKING_ID_LABELS.test(line) && nextLine && looksLikeBookingId(nextLine) && !bookingId) {
+      bookingId = nextLine.trim();
+    }
+    // Same-line ID only if it looks like a real ID (avoid "Notification", "Date", etc.)
+    const sameLineId = line.match(/(?:booking\s+reference|confirmation\s+code|reservation\s+id)\s*[:\s]+([A-Za-z0-9\-]{5,})/i);
+    if (sameLineId && !bookingId && looksLikeBookingId(sameLineId[1])) {
+      bookingId = sameLineId[1];
+    }
+
+    // —— Property name: label on one line, value on next (e.g. "Property Name" → "Sunset Villa Paphos")
+    if (PROPERTY_NAME_LABELS.test(line) && nextLine && nextLine.length > 0 && nextLine.length < 200 && !propertyName) {
+      propertyName = nextLine.trim();
+    }
   }
 
-  // If we didn't find labeled checkout, look for any clear date (e.g. "16 March 2025")
+  // Fallback: only if we still have no checkout and no checkin — and only use lines that are clearly stay dates, not "Date:" or "Booking Date"
   if (!checkoutDate && !checkinDate) {
     for (const line of lines) {
+      if (isDocumentDateLine(line)) continue;
       const d = parseDate(line);
       if (d && d >= new Date()) {
         checkoutDate = d;
@@ -146,17 +212,11 @@ export function parseBookingText(text: string): ParsedBooking {
     }
   }
 
-  // Property hint: often in subject or "Listing:" / "Property:"
-  const subjectLine = lines[0] || plain.slice(0, 200);
-  const listingMatch = (plain + " " + subjectLine).match(/(?:listing|property|accommodation)\s*[:\s]+([^\n]+)/i);
-  if (listingMatch) propertyHint = listingMatch[1].trim().slice(0, 120);
-  else if (subjectLine.length < 150 && subjectLine.length > 2) propertyHint = subjectLine.slice(0, 120);
-
   return {
     checkoutDate,
     checkinDate,
     checkoutTime,
-    propertyHint: propertyHint || null,
+    propertyName: propertyName || null,
     bookingId: bookingId || null,
   };
 }

@@ -13,8 +13,28 @@ const INGEST_SAMPLES = [
   { value: "vrbo", label: "VRBO" },
 ] as const;
 
-type Property = { id: string; name: string };
+type Property = {
+  id: string;
+  name: string;
+  name_booking_com?: string | null;
+  name_airbnb?: string | null;
+  name_vrbo?: string | null;
+};
 type Cleaner = { id: string; name: string };
+
+function matchPropertyToChannelName(properties: Property[], channelPropertyName: string | null): string | null {
+  if (!channelPropertyName || properties.length === 0) return null;
+  const want = channelPropertyName.trim().toLowerCase();
+  if (!want) return null;
+  const p = properties.find(
+    (q) =>
+      q.name?.trim().toLowerCase() === want ||
+      (q.name_booking_com?.trim().toLowerCase() === want) ||
+      (q.name_airbnb?.trim().toLowerCase() === want) ||
+      (q.name_vrbo?.trim().toLowerCase() === want)
+  );
+  return p ? p.id : null;
+}
 
 type Props = {
   properties: Property[];
@@ -25,7 +45,7 @@ type ParsedPreview = {
   checkoutDate: string | null;
   checkinDate: string | null;
   checkoutTime: { hours: number; minutes: number } | null;
-  propertyHint: string | null;
+  propertyName: string | null;
   bookingId: string | null;
 };
 
@@ -58,7 +78,10 @@ export function ImportBookingForm({ properties, cleaners }: Props) {
         body: JSON.stringify({ text: sampleText }),
       });
       const data = await parseRes.json().catch(() => ({}));
-      setPreview(data.parsed ?? null);
+      const parsed = data.parsed ?? null;
+      setPreview(parsed);
+      const matchedId = matchPropertyToChannelName(properties, parsed?.propertyName ?? null);
+      if (matchedId) setPropertyId(matchedId);
     } catch {
       setError("Could not load sample.");
     } finally {
@@ -86,7 +109,10 @@ export function ImportBookingForm({ properties, cleaners }: Props) {
         setError(data.error || "Parse failed");
         return;
       }
-      setPreview(data.parsed ?? null);
+      const parsed = data.parsed ?? null;
+      setPreview(parsed);
+      const matchedId = matchPropertyToChannelName(properties, parsed?.propertyName ?? null);
+      if (matchedId) setPropertyId(matchedId);
     } finally {
       setParsing(false);
     }
@@ -210,7 +236,7 @@ export function ImportBookingForm({ properties, cleaners }: Props) {
             {preview.checkoutTime && (
               <li>Time: {String(preview.checkoutTime.hours).padStart(2, "0")}:{String(preview.checkoutTime.minutes).padStart(2, "0")}</li>
             )}
-            {preview.propertyHint && <li>Property hint: {preview.propertyHint}</li>}
+            {preview.propertyName && <li>Property name (channel): {preview.propertyName}</li>}
             {preview.bookingId && <li>Reservation ID: {preview.bookingId}</li>}
           </ul>
           {!preview.checkoutDate && !preview.checkinDate && (

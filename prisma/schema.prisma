@@ -45,6 +45,12 @@ model Property {
   checkout_time_default     DateTime?
   cleaning_duration_minutes Int?
   instructions_text         String?
+  /// Optional: name as shown on Booking.com (for matching pasted/forwarded confirmations).
+  name_booking_com          String?
+  /// Optional: name as shown on Airbnb (for matching pasted/forwarded confirmations).
+  name_airbnb               String?
+  /// Optional: name as shown on Vrbo (for matching pasted/forwarded confirmations).
+  name_vrbo                 String?
   created_at                DateTime          @default(now())
   updated_at                DateTime          @updatedAt
   cleanings                 Cleaning[]

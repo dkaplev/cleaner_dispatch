@@ -9,7 +9,7 @@ export default async function ImportBookingPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  let properties: { id: string; name: string }[] = [];
+  let properties: { id: string; name: string; name_booking_com: string | null; name_airbnb: string | null; name_vrbo: string | null }[] = [];
   let cleaners: { id: string; name: string }[] = [];
   let prisma;
   try {
@@ -18,7 +18,7 @@ export default async function ImportBookingPage() {
       prisma.property.findMany({
         where: { landlord_id: session.user.id },
         orderBy: { name: "asc" },
-        select: { id: true, name: true },
+        select: { id: true, name: true, name_booking_com: true, name_airbnb: true, name_vrbo: true },
       }),
       prisma.cleaner.findMany({
         where: { landlord_id: session.user.id, is_active: true },
