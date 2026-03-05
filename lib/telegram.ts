@@ -104,6 +104,41 @@ export async function sendTelegramMessageWithUrlButton(
 }
 
 /**
+ * Notify the landlord of a newly ingested booking.
+ * Row 1: "🚀 Dispatch" (callback_data: dispatch_job:<jobId>) | "📋 Manage in app" (URL button).
+ * callback_data: "dispatch_job:<jobId>" — max ~38 chars, well under 64-byte Telegram limit.
+ */
+export async function sendTelegramLandlordBookingMessage(
+  chatId: string,
+  text: string,
+  jobId: string,
+  manageUrl: string
+): Promise<void> {
+  const token = getBotToken();
+  if (!token || !chatId?.trim()) return;
+
+  const dispatchData = `dispatch_job:${jobId}`;
+  const row: Record<string, string>[] = [{ text: "🚀 Dispatch", callback_data: dispatchData }];
+  if (manageUrl) row.push({ text: "📋 Manage in app", url: manageUrl });
+
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId.trim(),
+      text,
+      parse_mode: "HTML",
+      reply_markup: { inline_keyboard: [row] },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    console.error("Telegram sendMessage (landlord booking) failed:", res.status, err);
+    throw new Error("Telegram send failed");
+  }
+}
+
+/**
  * Call answerCallbackQuery to dismiss the loading state after handling a button press.
  */
 export async function answerTelegramCallback(

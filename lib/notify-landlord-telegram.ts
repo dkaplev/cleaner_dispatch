@@ -3,7 +3,7 @@
  * Keeps them in control and aware without spamming (only: accepted, declined, job done).
  */
 
-import { sendTelegramMessage, sendTelegramMessageWithUrlButton } from "@/lib/telegram";
+import { sendTelegramMessage, sendTelegramMessageWithUrlButton, sendTelegramLandlordBookingMessage } from "@/lib/telegram";
 
 function dashboardJobUrl(jobId: string): string {
   const base = process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "";
@@ -70,6 +70,68 @@ export async function notifyLandlordJobDeclined(
     );
   } else {
     await sendTelegramMessage(landlordChatId, text);
+  }
+}
+
+/**
+ * Notify landlord when a booking is automatically ingested (via email forwarding).
+ * Shows booking details + cleaning order preview, and offers two buttons:
+ *   "Dispatch" — sends the offer to the primary/fallback cleaner immediately.
+ *   "Manage in app" — opens the job page in the dashboard.
+ */
+export async function notifyLandlordNewIngestedBooking(
+  landlordChatId: string | null | undefined,
+  {
+    jobId,
+    propertyName,
+    windowStart,
+    windowEnd,
+    bookingRef,
+    channelPropertyName,
+    primaryCleanerName,
+    fallbackCleanerNames,
+  }: {
+    jobId: string;
+    propertyName: string;
+    windowStart: Date;
+    windowEnd: Date;
+    bookingRef?: string | null;
+    channelPropertyName?: string | null;
+    primaryCleanerName?: string | null;
+    fallbackCleanerNames?: string[];
+  }
+): Promise<void> {
+  if (!landlordChatId?.trim()) return;
+
+  const windowStr =
+    `${windowStart.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} – ` +
+    `${windowEnd.toLocaleTimeString(undefined, { timeStyle: "short" })}`;
+
+  let msg = `📩 <b>New booking received</b>\n\n`;
+  if (channelPropertyName && channelPropertyName.trim() !== propertyName.trim()) {
+    msg += `Channel listing: ${escapeTg(channelPropertyName)}\n`;
+  }
+  msg += `Property: <b>${escapeTg(propertyName)}</b>\n`;
+  msg += `Cleaning window: ${escapeTg(windowStr)}\n`;
+  if (bookingRef) msg += `Booking ref: <code>${escapeTg(bookingRef)}</code>\n`;
+
+  msg += `\n`;
+  if (primaryCleanerName) {
+    const fallbackStr =
+      fallbackCleanerNames?.length
+        ? ` → ${fallbackCleanerNames.map(escapeTg).join(" → ")} (fallback)`
+        : "";
+    msg += `Will offer to: <b>${escapeTg(primaryCleanerName)}</b>${fallbackStr}\n\n`;
+    msg += `Press <b>Dispatch</b> to send the offer now.`;
+  } else {
+    msg += `⚠️ No cleaner configured for this property.\nPress <b>Manage in app</b> to assign one manually.`;
+  }
+
+  const jobUrl = dashboardJobUrl(jobId);
+  try {
+    await sendTelegramLandlordBookingMessage(landlordChatId, msg, jobId, jobUrl);
+  } catch {
+    await sendTelegramMessage(landlordChatId, msg);
   }
 }
 

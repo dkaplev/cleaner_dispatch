@@ -5,7 +5,7 @@ import {
   sendTelegramMessage,
   sendTelegramMessageWithUrlButton,
 } from "@/lib/telegram";
-import { dispatchJob } from "@/lib/dispatch";
+import { dispatchJob, getResponseMinutes } from "@/lib/dispatch";
 import { createUploadToken } from "@/lib/upload-token";
 import {
   notifyLandlordJobAccepted,
@@ -61,9 +61,13 @@ export async function POST(request: Request) {
     text: message?.text ?? "(no text)",
   });
 
-  // Handle Accept/Decline inline button press
+  // Handle inline button presses
   if (callbackQuery?.id && callbackQuery?.data) {
-    const handled = await handleOfferCallback(callbackQuery);
+    if (callbackQuery.data.startsWith("dispatch_job:")) {
+      await handleLandlordDispatchCallback(callbackQuery);
+    } else {
+      await handleOfferCallback(callbackQuery);
+    }
     return NextResponse.json({ ok: true });
   }
 
@@ -186,6 +190,101 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[Telegram webhook] Error:", error);
     return NextResponse.json({ ok: true }); // 200 so Telegram doesn't retry forever
+  } finally {
+    if (prisma) await prisma.$disconnect();
+  }
+}
+
+/**
+ * Landlord pressed "Dispatch" on a new-booking notification.
+ * Verifies the chat belongs to the job's landlord, then runs dispatchJob.
+ */
+async function handleLandlordDispatchCallback(callbackQuery: {
+  id: string;
+  data?: string;
+  from?: { id: number };
+  message?: { chat: { id: number } };
+}): Promise<void> {
+  const jobId = callbackQuery.data?.slice("dispatch_job:".length).trim();
+  const chatId = callbackQuery.message?.chat?.id
+    ? String(callbackQuery.message.chat.id)
+    : null;
+
+  if (!jobId || !chatId) {
+    await answerTelegramCallback(callbackQuery.id, { text: "Invalid request.", show_alert: true });
+    return;
+  }
+
+  let prisma;
+  try {
+    prisma = getPrisma();
+
+    // Verify caller is this job's landlord
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        landlord: { select: { telegram_chat_id: true } },
+        property: { select: { name: true } },
+      },
+    });
+
+    if (!job) {
+      await answerTelegramCallback(callbackQuery.id, { text: "Job not found.", show_alert: true });
+      return;
+    }
+    if (job.landlord.telegram_chat_id?.trim() !== chatId) {
+      await answerTelegramCallback(callbackQuery.id, { text: "Not authorised.", show_alert: true });
+      return;
+    }
+    if (job.status !== "new" && job.status !== "offered") {
+      await answerTelegramCallback(callbackQuery.id, {
+        text: `Job is already ${job.status}. No action needed.`,
+        show_alert: false,
+      });
+      return;
+    }
+
+    const result = await dispatchJob(prisma, jobId);
+    if (result.success) {
+      await answerTelegramCallback(callbackQuery.id, {
+        text: `✅ Offer sent to ${result.attempt.cleaner_name}.`,
+        show_alert: false,
+      });
+      try {
+        await sendTelegramMessage(
+          chatId,
+          `✅ <b>Dispatched</b>\n\n` +
+          `<b>${escapeHtml(job.property.name)}</b> — offer sent to <b>${escapeHtml(result.attempt.cleaner_name)}</b>. ` +
+          `They have ${getResponseMinutes()} minutes to accept.`
+        );
+      } catch (e) {
+        console.error("[Telegram webhook] Failed to send dispatch confirmation:", e);
+      }
+    } else {
+      await answerTelegramCallback(callbackQuery.id, {
+        text: `Could not dispatch: ${result.error}`,
+        show_alert: true,
+      });
+      try {
+        const baseUrl = process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "";
+        const jobUrl = baseUrl ? `${baseUrl}/dashboard/jobs/${jobId}/edit` : "";
+        await sendTelegramMessageWithUrlButton(
+          chatId,
+          `⚠️ <b>Dispatch failed</b>\n\n<b>${escapeHtml(job.property.name)}</b> — ${escapeHtml(result.error)}\n\nPlease assign a cleaner in the app.`,
+          "📋 Manage in app",
+          jobUrl
+        );
+      } catch (e) {
+        console.error("[Telegram webhook] Failed to send dispatch-failed message:", e);
+      }
+    }
+  } catch (e) {
+    console.error("[Telegram webhook] handleLandlordDispatchCallback error:", e);
+    try {
+      await answerTelegramCallback(callbackQuery.id, { text: "Something went wrong.", show_alert: true });
+    } catch (_e) {
+      // ignore
+    }
   } finally {
     if (prisma) await prisma.$disconnect();
   }
