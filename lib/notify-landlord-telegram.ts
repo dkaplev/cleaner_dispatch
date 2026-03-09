@@ -7,7 +7,7 @@ import { sendTelegramMessage, sendTelegramMessageWithUrlButton, sendTelegramLand
 
 function dashboardJobUrl(jobId: string): string {
   const base = process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "";
-  return base ? `${base}/dashboard/jobs/${jobId}/edit` : "";
+  return base ? `${base}/dashboard/jobs/${jobId}` : "";
 }
 
 function escapeTg(s: string): string {
@@ -90,6 +90,7 @@ export async function notifyLandlordNewIngestedBooking(
     channelPropertyName,
     primaryCleanerName,
     fallbackCleanerNames,
+    propertyAutoFallback,
   }: {
     jobId: string;
     propertyName: string;
@@ -99,6 +100,7 @@ export async function notifyLandlordNewIngestedBooking(
     channelPropertyName?: string | null;
     primaryCleanerName?: string | null;
     fallbackCleanerNames?: string[];
+    propertyAutoFallback?: boolean;
   }
 ): Promise<void> {
   if (!landlordChatId?.trim()) return;
@@ -108,7 +110,9 @@ export async function notifyLandlordNewIngestedBooking(
     `${windowEnd.toLocaleTimeString(undefined, { timeStyle: "short" })}`;
 
   let msg = `📩 <b>New booking received</b>\n\n`;
-  if (channelPropertyName && channelPropertyName.trim() !== propertyName.trim()) {
+  if (propertyAutoFallback && channelPropertyName) {
+    msg += `⚠️ "<b>${escapeTg(channelPropertyName)}</b>" not matched — defaulted to <b>${escapeTg(propertyName)}</b>.\nSet the channel name in Properties → Edit to auto-match next time.\n\n`;
+  } else if (channelPropertyName && channelPropertyName.trim() !== propertyName.trim()) {
     msg += `Channel listing: ${escapeTg(channelPropertyName)}\n`;
   }
   msg += `Property: <b>${escapeTg(propertyName)}</b>\n`;

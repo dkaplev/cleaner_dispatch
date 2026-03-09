@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
+import { randomBytes } from "crypto";
 import { getPrisma } from "@/lib/prisma";
 
 const ROLE_LANDLORD = "landlord";
@@ -34,11 +35,13 @@ export async function POST(request: Request) {
     }
 
     const password_hash = await hash(password, 12);
+    const ingest_token = randomBytes(16).toString("hex");
     await prisma.user.create({
       data: {
         email,
         password_hash,
         role: ROLE_LANDLORD,
+        ingest_token,
       },
     });
 

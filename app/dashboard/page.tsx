@@ -70,6 +70,15 @@ export default async function DashboardPage() {
               </Link>
               <span className="text-zinc-500 text-sm ml-2">— Assign jobs (choose cleaner or use fallback); cleaner gets Accept/Decline and photo upload in Telegram</span>
             </li>
+            <li>
+              <Link
+                href="/dashboard/integrations"
+                className="text-zinc-700 underline hover:no-underline font-medium"
+              >
+                Integrations
+              </Link>
+              <span className="text-zinc-500 text-sm ml-2">— Email forwarding setup; auto-create jobs from booking confirmations</span>
+            </li>
           </ul>
           <TelegramTest />
           <p className="mt-6 text-sm text-zinc-500">

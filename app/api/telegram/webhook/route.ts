@@ -267,7 +267,7 @@ async function handleLandlordDispatchCallback(callbackQuery: {
       });
       try {
         const baseUrl = process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "";
-        const jobUrl = baseUrl ? `${baseUrl}/dashboard/jobs/${jobId}/edit` : "";
+        const jobUrl = baseUrl ? `${baseUrl}/dashboard/jobs/${jobId}` : "";
         await sendTelegramMessageWithUrlButton(
           chatId,
           `⚠️ <b>Dispatch failed</b>\n\n<b>${escapeHtml(job.property.name)}</b> — ${escapeHtml(result.error)}\n\nPlease assign a cleaner in the app.`,

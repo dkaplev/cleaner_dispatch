@@ -5,12 +5,16 @@ import { notifyLandlordNewIngestedBooking } from "@/lib/notify-landlord-telegram
 
 /**
  * POST /api/ingest/email
- * Webhook for inbound email (Resend, Mailgun, Postmark). Parses booking confirmation,
- * creates a job (status "new", no dispatch), and notifies the landlord via Telegram with
- * a "Dispatch" button and a "Manage in app" button.
+ * Webhook called by n8n (or any HTTP client) when a booking confirmation email arrives.
+ * Parses the email, creates a job (status "new"), and notifies the landlord via Telegram.
  *
- * Required env: INGEST_WEBHOOK_SECRET, INGEST_LANDLORD_ID
- * Optional env: INGEST_DEFAULT_PROPERTY_ID (overrides channel-name matching)
+ * Landlord resolution (first match wins):
+ *   1. INGEST_LANDLORD_ID env var — hard override, single-tenant / testing
+ *   2. landlord_email field in request body — looks up user by email; use this for
+ *      multi-landlord setups where n8n passes the original email recipient
+ *
+ * Required env: INGEST_WEBHOOK_SECRET
+ * Optional env: INGEST_LANDLORD_ID, INGEST_DEFAULT_PROPERTY_ID
  *
  * Auth: Authorization: Bearer <INGEST_WEBHOOK_SECRET> or ?secret=<INGEST_WEBHOOK_SECRET>
  */
@@ -21,11 +25,6 @@ export async function POST(request: Request) {
   const expected = process.env.INGEST_WEBHOOK_SECRET;
   if (!expected || secret !== expected) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const landlordId = process.env.INGEST_LANDLORD_ID?.trim();
-  if (!landlordId) {
-    return NextResponse.json({ error: "INGEST_LANDLORD_ID not configured" }, { status: 500 });
   }
 
   let body: unknown;
@@ -50,19 +49,17 @@ export async function POST(request: Request) {
       ? (body.data as Record<string, unknown>)
       : (body as Record<string, unknown>);
 
-  const subject = typeof data.subject === "string" ? data.subject : "";
-  const text =
-    typeof data.text === "string"
-      ? data.text
-      : typeof data["body-plain"] === "string"
-        ? data["body-plain"]
-        : "";
-  const html =
-    typeof data.html === "string"
-      ? data.html
-      : typeof data["body-html"] === "string"
-        ? data["body-html"]
-        : "";
+  // Normalise fields across providers:
+  //   Postmark:  Subject, TextBody, HtmlBody
+  //   Mailgun:   subject, body-plain, body-html
+  //   Generic:   subject, text, html
+  function str(key: string): string {
+    return typeof data[key] === "string" ? (data[key] as string) : "";
+  }
+
+  const subject = str("Subject") || str("subject");
+  const text = str("TextBody") || str("text") || str("body-plain");
+  const html = str("HtmlBody") || str("html") || str("body-html");
   const combined = [subject, text || html].filter(Boolean).join("\n");
 
   if (!combined.trim()) {
@@ -71,6 +68,42 @@ export async function POST(request: Request) {
 
   const parsed = parseBookingText(combined);
   const prisma = getPrisma();
+
+  // Resolve landlord — first match wins:
+  //   1. INGEST_LANDLORD_ID env var  (hard override / single-tenant testing)
+  //   2. ingest_token from body      (primary: n8n extracts the +tag from the "to" address)
+  //      e.g. n8n body field: "ingest_token": "{{ $json.to.value[0].address.match(/\+([^@]+)/)?.[1] }}"
+  //   3. landlord_email from body    (fallback: look up by signup email)
+  let landlordId: string | null = process.env.INGEST_LANDLORD_ID?.trim() || null;
+
+  if (!landlordId) {
+    const token = str("ingest_token").trim();
+    if (token) {
+      const found = await prisma.user.findUnique({
+        where: { ingest_token: token },
+        select: { id: true },
+      });
+      landlordId = found?.id ?? null;
+    }
+  }
+
+  if (!landlordId) {
+    const bodyEmail = str("landlord_email").toLowerCase().trim();
+    if (bodyEmail) {
+      const found = await prisma.user.findFirst({
+        where: { email: { equals: bodyEmail, mode: "insensitive" } },
+        select: { id: true },
+      });
+      landlordId = found?.id ?? null;
+    }
+  }
+
+  if (!landlordId) {
+    return NextResponse.json(
+      { error: "Cannot identify landlord. Include ingest_token (from email +tag) or landlord_email in the request body." },
+      { status: 400 }
+    );
+  }
 
   try {
     // Resolve property: INGEST_DEFAULT_PROPERTY_ID > channel-name match > first property of landlord
@@ -81,6 +114,8 @@ export async function POST(request: Request) {
       checkout_time_default: Date | null;
       cleaning_duration_minutes: number | null;
     } | null = null;
+
+    let propertyAutoFallback = false;
 
     if (defaultPropertyId) {
       property = await prisma.property.findFirst({
@@ -97,14 +132,17 @@ export async function POST(request: Request) {
           name_booking_com: true, name_airbnb: true, name_vrbo: true,
         },
       });
-      property =
-        allProperties.find(
-          (p) =>
-            p.name.toLowerCase() === want ||
-            p.name_booking_com?.toLowerCase() === want ||
-            p.name_airbnb?.toLowerCase() === want ||
-            p.name_vrbo?.toLowerCase() === want
-        ) ?? allProperties[0] ?? null;
+      const matched = allProperties.find(
+        (p) =>
+          p.name.toLowerCase() === want ||
+          p.name_booking_com?.toLowerCase() === want ||
+          p.name_airbnb?.toLowerCase() === want ||
+          p.name_vrbo?.toLowerCase() === want
+      );
+      if (!matched && allProperties[0]) {
+        propertyAutoFallback = true;
+      }
+      property = matched ?? allProperties[0] ?? null;
     } else {
       property = await prisma.property.findFirst({
         where: { landlord_id: landlordId },
@@ -169,6 +207,7 @@ export async function POST(request: Request) {
           channelPropertyName: parsed.propertyName,
           primaryCleanerName,
           fallbackCleanerNames,
+          propertyAutoFallback,
         });
       } catch (e) {
         console.error("[ingest/email] Telegram notify failed (non-fatal):", e);

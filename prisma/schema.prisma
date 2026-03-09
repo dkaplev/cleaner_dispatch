@@ -19,6 +19,7 @@ model User {
   password_hash    String
   role             String
   telegram_chat_id String?   // for landlord: receive job status updates in Telegram
+  ingest_token     String?   @unique // random hex; used to build per-landlord email forwarding address
   created_at       DateTime  @default(now())
   properties       Property[]
   cleaners         Cleaner[]
