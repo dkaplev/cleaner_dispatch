@@ -58,15 +58,28 @@ export async function POST(request: Request) {
   }
 
   const subject = str("Subject") || str("subject");
-  const text = str("TextBody") || str("text") || str("body-plain");
-  const html = str("HtmlBody") || str("html") || str("body-html");
-  const combined = [subject, text || html].filter(Boolean).join("\n");
+  const rawText       = str("TextBody") || str("text") || str("body-plain");
+  const rawTextAsHtml = str("textAsHtml");
+  const rawHtml       = str("HtmlBody") || str("html") || str("body-html");
 
-  if (!combined.trim()) {
+  // Build an ordered list of body sources to try (skip empty ones).
+  const bodyCandidates = [rawText, rawTextAsHtml, rawHtml].filter(Boolean);
+
+  if (!subject && bodyCandidates.length === 0) {
     return NextResponse.json({ error: "No subject or body" }, { status: 400 });
   }
 
-  const parsed = parseBookingText(combined);
+  // Try each source in order; stop at the first that yields a checkout date.
+  // Fall back to the richest partial result (has check-in or booking ID) if none have checkout.
+  let parsed = parseBookingText([subject, bodyCandidates[0] ?? ""].filter(Boolean).join("\n"));
+  for (const body of bodyCandidates.slice(1)) {
+    if (parsed.checkoutDate) break;
+    const candidate = parseBookingText([subject, body].filter(Boolean).join("\n"));
+    // Prefer a candidate that has a checkout date, or more fields filled than current best
+    const currentScore = (parsed.checkoutDate ? 4 : 0) + (parsed.checkinDate ? 2 : 0) + (parsed.bookingId ? 1 : 0);
+    const candidateScore = (candidate.checkoutDate ? 4 : 0) + (candidate.checkinDate ? 2 : 0) + (candidate.bookingId ? 1 : 0);
+    if (candidateScore > currentScore) parsed = candidate;
+  }
   const prisma = getPrisma();
 
   // Resolve landlord — first match wins:
