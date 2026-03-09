@@ -174,64 +174,94 @@ export function parseBookingText(text: string): ParsedBooking {
   let propertyName: string | null = null;
   let bookingId: string | null = null;
 
-  // —— 1) Check-out: find a line that is strictly "Check-out" / "Check-out Date" / "Departure" / "Departure Date"
-  //    Then take date (and time) from the next line(s). Skip a lone "Date" line if present.
+  // —— 1) Check-out: supports two formats:
+  //    a) Label-only line → date on next line  ("Check-out\nMonday, 30 June 2025")
+  //    b) Inline           → label + date same line ("Check-out Monday, 30 June 2025" or "Check-out: ...")
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (!isCheckoutLabel(line)) continue;
 
-    let dateLine: string;
+    // (a) label is the entire line → date is on the next line
     if (isCheckoutLabelOnly(line)) {
       let next = i + 1;
       while (next < lines.length && lines[next].trim().toLowerCase() === "date") next++;
-      if (next < lines.length) dateLine = lines[next];
-      else continue;
-    } else {
-      dateLine = line;
+      if (next >= lines.length) continue;
+      const dateLine = lines[next];
+      if (isBlacklistedDateLine(dateLine) || !MONTH_NAMES.test(dateLine)) continue;
+      const d = parseDate(dateLine);
+      if (d) { checkoutDate = d; checkoutTime = parseStayTime(dateLine); }
+      break;
     }
-    if (isBlacklistedDateLine(dateLine)) continue;
-    if (!MONTH_NAMES.test(dateLine)) continue;
 
-    const d = parseDate(dateLine);
-    if (d) {
-      checkoutDate = d;
-      checkoutTime = parseStayTime(dateLine);
+    // (b) label + date on same line, e.g. "Check-out Monday, 30 June 2025 (before 11:00)"
+    //     or "Check-out: 30 June 2025"
+    const inlineMatch = line.match(/^check\s*[- ]?out(?:\s+date)?[\s:]+(.+)$/i)
+      ?? line.match(/^departure(?:\s+date)?[\s:]+(.+)$/i);
+    if (inlineMatch) {
+      const datePart = inlineMatch[1];
+      if (!isBlacklistedDateLine(datePart) && MONTH_NAMES.test(datePart)) {
+        const d = parseDate(datePart);
+        if (d) { checkoutDate = d; checkoutTime = parseStayTime(datePart); }
+        break;
+      }
     }
-    break;
   }
 
-  // —— 2) Check-in: same idea; skip a lone "Date" line if present
+  // —— 2) Check-in: same two formats
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (!isCheckinLabel(line)) continue;
-    let dateLine: string;
+
     if (isCheckinLabelOnly(line)) {
       let next = i + 1;
       while (next < lines.length && lines[next].trim().toLowerCase() === "date") next++;
-      if (next < lines.length) dateLine = lines[next];
-      else continue;
-    } else {
-      dateLine = line;
+      if (next >= lines.length) continue;
+      const dateLine = lines[next];
+      if (isBlacklistedDateLine(dateLine) || !MONTH_NAMES.test(dateLine)) continue;
+      const d = parseDate(dateLine);
+      if (d) checkinDate = d;
+      break;
     }
-    if (isBlacklistedDateLine(dateLine)) continue;
-    if (!MONTH_NAMES.test(dateLine)) continue;
-    const d = parseDate(dateLine);
-    if (d) checkinDate = d;
-    break;
+
+    const inlineMatch = line.match(/^check\s*[- ]?in(?:\s+date)?[\s:]+(.+)$/i)
+      ?? line.match(/^arrival(?:\s+date)?[\s:]+(.+)$/i);
+    if (inlineMatch) {
+      const datePart = inlineMatch[1];
+      if (!isBlacklistedDateLine(datePart) && MONTH_NAMES.test(datePart)) {
+        const d = parseDate(datePart);
+        if (d) checkinDate = d;
+        break;
+      }
+    }
   }
 
-  // —— 3) Booking ID: label on one line, value on next
+  // —— 3) Booking ID: label on one line + value on next; OR inline "Label: VALUE"
   for (let i = 0; i < lines.length; i++) {
-    if (BOOKING_ID_LABELS.test(lines[i]) && i + 1 < lines.length && looksLikeBookingId(lines[i + 1])) {
-      bookingId = lines[i + 1].trim();
+    if (BOOKING_ID_LABELS.test(lines[i])) {
+      // next-line format
+      if (i + 1 < lines.length && looksLikeBookingId(lines[i + 1])) {
+        bookingId = lines[i + 1].trim();
+        break;
+      }
+    }
+    // inline format: "Confirmation Code HMXZ4R8K2"
+    const inlineId = lines[i].match(/^(?:booking\s+reference|confirmation\s+code|reservation\s+id|confirmation\s+id)[\s:]+(\S+)/i);
+    if (inlineId && looksLikeBookingId(inlineId[1])) {
+      bookingId = inlineId[1].trim();
       break;
     }
   }
 
-  // —— 4) Property name: label on one line, value on next
+  // —— 4) Property name: label on one line + value on next; OR inline "Label: VALUE"
   for (let i = 0; i < lines.length; i++) {
-    if (PROPERTY_NAME_LABELS.test(lines[i]) && i + 1 < lines.length && lines[i + 1].length > 0 && lines[i + 1].length < 200) {
-      propertyName = lines[i + 1].trim();
+    if (PROPERTY_NAME_LABELS.test(lines[i])) {
+      if (i + 1 < lines.length && lines[i + 1].length > 0 && lines[i + 1].length < 200) {
+        propertyName = lines[i + 1].trim();
+        break;
+      }
+    }
+    // inline format: "Listing Name Charming Sea View Apartment, Limassol"
+    const inlineProp = lines[i].match(/^(?:property\s+name|listing\s+name|listing|accommodation)[\s:]+(.+)$/i);
+    if (inlineProp && inlineProp[1].length > 0 && inlineProp[1].length < 200) {
+      propertyName = inlineProp[1].trim();
       break;
     }
   }
