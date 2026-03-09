@@ -166,7 +166,8 @@ const PROPERTY_NAME_LABELS = /^(?:property\s+name|listing\s+name|listing|accommo
 export function parseBookingText(text: string): ParsedBooking {
   const raw = typeof text === "string" ? text : "";
   const plain = stripHtml(raw);
-  const lines = plain.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  // Gmail encodes HTML bold/italic as *text* in its plain-text output — strip those markers.
+  const lines = plain.split(/\n/).map((l) => l.trim().replace(/^\*+|\*+$/g, "").trim()).filter(Boolean);
 
   let checkoutDate: Date | null = null;
   let checkinDate: Date | null = null;
