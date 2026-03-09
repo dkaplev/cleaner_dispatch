@@ -91,6 +91,8 @@ export async function notifyLandlordNewIngestedBooking(
     primaryCleanerName,
     fallbackCleanerNames,
     propertyAutoFallback,
+    platform,
+    extraWindows,
   }: {
     jobId: string;
     propertyName: string;
@@ -101,6 +103,8 @@ export async function notifyLandlordNewIngestedBooking(
     primaryCleanerName?: string | null;
     fallbackCleanerNames?: string[];
     propertyAutoFallback?: boolean;
+    platform?: string | null;
+    extraWindows?: Array<{ window_start: Date; window_end: Date }>;
   }
 ): Promise<void> {
   if (!landlordChatId?.trim()) return;
@@ -110,6 +114,7 @@ export async function notifyLandlordNewIngestedBooking(
     `${windowEnd.toLocaleTimeString(undefined, { timeStyle: "short" })}`;
 
   let msg = `📩 <b>New booking received</b>\n\n`;
+  if (platform) msg += `Platform: <b>${escapeTg(platform)}</b>\n`;
   if (propertyAutoFallback && channelPropertyName) {
     msg += `⚠️ "<b>${escapeTg(channelPropertyName)}</b>" not matched — defaulted to <b>${escapeTg(propertyName)}</b>.\nSet the channel name in Properties → Edit to auto-match next time.\n\n`;
   } else if (channelPropertyName && channelPropertyName.trim() !== propertyName.trim()) {
@@ -117,6 +122,14 @@ export async function notifyLandlordNewIngestedBooking(
   }
   msg += `Property: <b>${escapeTg(propertyName)}</b>\n`;
   msg += `Cleaning window: ${escapeTg(windowStr)}\n`;
+  if (extraWindows?.length) {
+    for (const w of extraWindows) {
+      const wStr =
+        `${w.window_start.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} – ` +
+        `${w.window_end.toLocaleTimeString(undefined, { timeStyle: "short" })}`;
+      msg += `Cleaning window: ${escapeTg(wStr)}\n`;
+    }
+  }
   if (bookingRef) msg += `Booking ref: <code>${escapeTg(bookingRef)}</code>\n`;
 
   msg += `\n`;

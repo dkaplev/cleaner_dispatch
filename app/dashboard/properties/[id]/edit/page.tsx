@@ -14,7 +14,7 @@ export default async function EditPropertyPage({
   const { id } = await params;
 
   let prisma;
-  let property: { id: string; name: string; checkout_time_default: Date | null; cleaning_duration_minutes: number | null; instructions_text: string | null; name_booking_com: string | null; name_airbnb: string | null; name_vrbo: string | null } | null = null;
+  let property: { id: string; name: string; checkout_time_default: Date | null; checkin_time_default: Date | null; cleaning_duration_minutes: number | null; instructions_text: string | null; cleaning_trigger: string; name_booking_com: string | null; name_airbnb: string | null; name_vrbo: string | null } | null = null;
   try {
     prisma = getPrisma();
     property = await prisma.property.findFirst({
@@ -32,6 +32,10 @@ export default async function EditPropertyPage({
     property.checkout_time_default != null
       ? property.checkout_time_default.toISOString().slice(11, 16)
       : "";
+  const checkinTimeForForm =
+    property.checkin_time_default != null
+      ? property.checkin_time_default.toISOString().slice(11, 16)
+      : "";
 
   return (
     <div className="min-h-screen bg-zinc-50 p-6">
@@ -43,6 +47,8 @@ export default async function EditPropertyPage({
           id={property.id}
           initialName={property.name}
           initialCheckoutTime={checkoutTimeForForm}
+          initialCheckinTime={checkinTimeForForm}
+          initialCleaningTrigger={property.cleaning_trigger}
           initialDuration={property.cleaning_duration_minutes ?? ""}
           initialInstructions={property.instructions_text ?? ""}
           initialNameBookingCom={property.name_booking_com ?? ""}

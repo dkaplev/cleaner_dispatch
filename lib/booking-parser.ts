@@ -12,8 +12,10 @@ export type ParsedBooking = {
   checkoutDate: Date | null;
   checkinDate: Date | null;
   checkoutTime: { hours: number; minutes: number } | null;
+  checkinTime: { hours: number; minutes: number } | null;
   propertyName: string | null;
   bookingId: string | null;
+  platform: string | null;
 };
 
 function stripHtml(input: string): string {
@@ -151,6 +153,15 @@ function parseStayTime(line: string): { hours: number; minutes: number } | null 
   return parseTime(line);
 }
 
+/** Detect the booking platform from any part of the combined text. */
+function detectPlatform(text: string): string | null {
+  const t = text.toLowerCase();
+  if (/\bairbnb\b/.test(t)) return "Airbnb";
+  if (/\bvrbo\b/.test(t) || /\bhomeaway\b/.test(t)) return "Vrbo";
+  if (/\bbooking\.com\b/.test(t) || /\bbdc-\d/.test(t)) return "Booking.com";
+  return null;
+}
+
 const BOOKING_ID_LABELS = /^(?:booking\s+reference|confirmation\s+code|reservation\s+id|confirmation\s+id)\s*$/i;
 const JUNK_ID_WORDS = new Set("notification date partner code name id team services details reminder".split(" "));
 function looksLikeBookingId(value: string): boolean {
@@ -172,6 +183,7 @@ export function parseBookingText(text: string): ParsedBooking {
   let checkoutDate: Date | null = null;
   let checkinDate: Date | null = null;
   let checkoutTime: { hours: number; minutes: number } | null = null;
+  let checkinTime: { hours: number; minutes: number } | null = null;
   let propertyName: string | null = null;
   let bookingId: string | null = null;
 
@@ -218,7 +230,7 @@ export function parseBookingText(text: string): ParsedBooking {
       const dateLine = lines[next];
       if (isBlacklistedDateLine(dateLine) || !MONTH_NAMES.test(dateLine)) continue;
       const d = parseDate(dateLine);
-      if (d) checkinDate = d;
+      if (d) { checkinDate = d; checkinTime = parseStayTime(dateLine); }
       break;
     }
 
@@ -228,7 +240,7 @@ export function parseBookingText(text: string): ParsedBooking {
       const datePart = inlineMatch[1];
       if (!isBlacklistedDateLine(datePart) && MONTH_NAMES.test(datePart)) {
         const d = parseDate(datePart);
-        if (d) checkinDate = d;
+        if (d) { checkinDate = d; checkinTime = parseStayTime(datePart); }
         break;
       }
     }
@@ -260,7 +272,8 @@ export function parseBookingText(text: string): ParsedBooking {
       }
     }
     // inline format: "Listing Name Charming Sea View Apartment, Limassol"
-    const inlineProp = lines[i].match(/^(?:property\s+name|listing\s+name|listing|accommodation)[\s:]+(.+)$/i);
+    // Note: bare "listing" intentionally excluded — it matches mid-sentence phrases like "listing and the details..."
+    const inlineProp = lines[i].match(/^(?:property\s+name|listing\s+name|accommodation)[\s:]+(.+)$/i);
     if (inlineProp && inlineProp[1].length > 0 && inlineProp[1].length < 200) {
       propertyName = inlineProp[1].trim();
       break;
@@ -271,9 +284,53 @@ export function parseBookingText(text: string): ParsedBooking {
     checkoutDate,
     checkinDate,
     checkoutTime,
+    checkinTime,
     propertyName: propertyName || null,
     bookingId: bookingId || null,
+    platform: detectPlatform(plain),
   };
+}
+
+/**
+ * Return cleaning window(s) based on property's cleaning_trigger setting.
+ * "after_checkout"  → one window starting at checkout time
+ * "before_checkin"  → one window ending at check-in time
+ * "both"            → two windows (checkout + checkin)
+ */
+export function bookingToWindows(
+  parsed: ParsedBooking,
+  trigger: string,
+  propertyCheckoutTime: string | null,
+  propertyCheckinTime: string | null,
+  cleaningDurationMinutes: number
+): Array<{ window_start: Date; window_end: Date }> {
+  const result: Array<{ window_start: Date; window_end: Date }> = [];
+
+  if (trigger === "after_checkout" || trigger === "both") {
+    const w = bookingToWindow(parsed, propertyCheckoutTime, cleaningDurationMinutes);
+    if (w) result.push(w);
+  }
+
+  if (trigger === "before_checkin" || trigger === "both") {
+    const date = parsed.checkinDate;
+    if (date) {
+      let hours = 15;
+      let minutes = 0;
+      if (parsed.checkinTime) {
+        hours = parsed.checkinTime.hours;
+        minutes = parsed.checkinTime.minutes;
+      } else if (propertyCheckinTime) {
+        const [h, m] = propertyCheckinTime.split(":").map((x) => parseInt(x, 10));
+        if (!Number.isNaN(h)) hours = h;
+        if (!Number.isNaN(m)) minutes = m;
+      }
+      const window_end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes, 0, 0);
+      const window_start = new Date(window_end.getTime() - cleaningDurationMinutes * 60 * 1000);
+      result.push({ window_start, window_end });
+    }
+  }
+
+  return result;
 }
 
 export function bookingToWindow(

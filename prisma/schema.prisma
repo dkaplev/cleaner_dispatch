@@ -52,6 +52,10 @@ model Property {
   name_airbnb               String?
   /// Optional: name as shown on Vrbo (for matching pasted/forwarded confirmations).
   name_vrbo                 String?
+  /// When to schedule cleaning: after_checkout | before_checkin | both
+  cleaning_trigger          String            @default("after_checkout")
+  /// Default check-in time (only time part is used), for "before_checkin" window end.
+  checkin_time_default      DateTime?
   created_at                DateTime          @default(now())
   updated_at                DateTime          @updatedAt
   cleanings                 Cleaning[]

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
-import { parseBookingText, bookingToWindow } from "@/lib/booking-parser";
+import { parseBookingText, bookingToWindows } from "@/lib/booking-parser";
 import { notifyLandlordNewIngestedBooking } from "@/lib/notify-landlord-telegram";
 
 /**
@@ -125,7 +125,9 @@ export async function POST(request: Request) {
       id: string;
       name: string;
       checkout_time_default: Date | null;
+      checkin_time_default: Date | null;
       cleaning_duration_minutes: number | null;
+      cleaning_trigger: string;
     } | null = null;
 
     let propertyAutoFallback = false;
@@ -133,7 +135,7 @@ export async function POST(request: Request) {
     if (defaultPropertyId) {
       property = await prisma.property.findFirst({
         where: { id: defaultPropertyId, landlord_id: landlordId },
-        select: { id: true, name: true, checkout_time_default: true, cleaning_duration_minutes: true },
+        select: { id: true, name: true, checkout_time_default: true, checkin_time_default: true, cleaning_duration_minutes: true, cleaning_trigger: true },
       });
     } else if (parsed.propertyName) {
       // Try to match by channel name fields (exact, case-insensitive)
@@ -141,7 +143,7 @@ export async function POST(request: Request) {
       const allProperties = await prisma.property.findMany({
         where: { landlord_id: landlordId },
         select: {
-          id: true, name: true, checkout_time_default: true, cleaning_duration_minutes: true,
+          id: true, name: true, checkout_time_default: true, checkin_time_default: true, cleaning_duration_minutes: true, cleaning_trigger: true,
           name_booking_com: true, name_airbnb: true, name_vrbo: true,
         },
       });
@@ -159,7 +161,7 @@ export async function POST(request: Request) {
     } else {
       property = await prisma.property.findFirst({
         where: { landlord_id: landlordId },
-        select: { id: true, name: true, checkout_time_default: true, cleaning_duration_minutes: true },
+        select: { id: true, name: true, checkout_time_default: true, checkin_time_default: true, cleaning_duration_minutes: true, cleaning_trigger: true },
         orderBy: { created_at: "asc" },
       });
     }
@@ -175,34 +177,54 @@ export async function POST(request: Request) {
       property.checkout_time_default != null
         ? `${String(property.checkout_time_default.getUTCHours()).padStart(2, "0")}:${String(property.checkout_time_default.getUTCMinutes()).padStart(2, "0")}`
         : null;
+    const checkinTimeDefault =
+      property.checkin_time_default != null
+        ? `${String(property.checkin_time_default.getUTCHours()).padStart(2, "0")}:${String(property.checkin_time_default.getUTCMinutes()).padStart(2, "0")}`
+        : null;
     const duration = property.cleaning_duration_minutes ?? 120;
-    const window = bookingToWindow(parsed, checkoutTimeDefault, duration);
+    const trigger = property.cleaning_trigger ?? "after_checkout";
 
-    if (!window) {
+    const windows = bookingToWindows(parsed, trigger, checkoutTimeDefault, checkinTimeDefault, duration);
+
+    if (!windows.length) {
       return NextResponse.json({ error: "Could not find checkout/check-in date in email body." }, { status: 400 });
     }
 
-    // Create job (status "new", no dispatch — landlord confirms via Telegram)
-    const job = await prisma.job.create({
-      data: {
-        landlord_id: landlordId,
-        property_id: property.id,
-        window_start: window.window_start,
-        window_end: window.window_end,
-        booking_id: parsed.bookingId || null,
-        status: "new",
-      },
-    });
+    // Create one job per cleaning window (status "new", no dispatch — landlord confirms via Telegram)
+    const jobs = await Promise.all(
+      windows.map((w) =>
+        prisma.job.create({
+          data: {
+            landlord_id: landlordId,
+            property_id: property!.id,
+            window_start: w.window_start,
+            window_end: w.window_end,
+            booking_id: parsed.bookingId || null,
+            status: "new",
+          },
+        })
+      )
+    );
+    const primaryJob = jobs[0];
 
-    // Resolve cleaner order (primary → fallbacks) for the notification preview
+    // Resolve cleaner order for the notification preview.
+    // Fallback: if no property cleaner configured, use first active landlord cleaner.
     const propertyCleaner = await prisma.propertyCleaner.findMany({
       where: { property_id: property.id },
       include: { cleaner: { select: { name: true } } },
       orderBy: [{ is_primary: "desc" }, { priority: "asc" }],
     });
-    const cleanerNames = propertyCleaner.map((pc) => pc.cleaner.name);
-    const primaryCleanerName = cleanerNames[0] ?? null;
-    const fallbackCleanerNames = cleanerNames.slice(1);
+    let primaryCleanerName: string | null = propertyCleaner[0]?.cleaner.name ?? null;
+    const fallbackCleanerNames = propertyCleaner.slice(1).map((pc) => pc.cleaner.name);
+
+    if (!primaryCleanerName) {
+      const firstCleaner = await prisma.cleaner.findFirst({
+        where: { landlord_id: landlordId, is_active: true },
+        orderBy: { created_at: "asc" },
+        select: { name: true },
+      });
+      primaryCleanerName = firstCleaner?.name ?? null;
+    }
 
     // Notify landlord via Telegram (no-op if Telegram not configured)
     const landlord = await prisma.user.findUnique({
@@ -212,15 +234,17 @@ export async function POST(request: Request) {
     if (landlord?.telegram_chat_id) {
       try {
         await notifyLandlordNewIngestedBooking(landlord.telegram_chat_id, {
-          jobId: job.id,
+          jobId: primaryJob.id,
           propertyName: property.name,
-          windowStart: window.window_start,
-          windowEnd: window.window_end,
+          windowStart: windows[0].window_start,
+          windowEnd: windows[0].window_end,
           bookingRef: parsed.bookingId,
           channelPropertyName: parsed.propertyName,
           primaryCleanerName,
           fallbackCleanerNames,
           propertyAutoFallback,
+          platform: parsed.platform,
+          extraWindows: windows.slice(1),
         });
       } catch (e) {
         console.error("[ingest/email] Telegram notify failed (non-fatal):", e);
@@ -229,8 +253,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      job_id: job.id,
-      window_start: job.window_start.toISOString(),
+      job_id: primaryJob.id,
+      jobs_created: jobs.length,
+      window_start: primaryJob.window_start.toISOString(),
       property: property.name,
       status: "awaiting_landlord_dispatch",
     });
