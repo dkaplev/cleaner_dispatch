@@ -7,7 +7,6 @@ export default async function OnboardingPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login?callbackUrl=/onboarding");
 
-  const prisma = getPrisma();
   let initialStep = 1;
   let firstPropertyId: string | null = null;
   let firstPropertyName: string | null = null;
@@ -16,6 +15,7 @@ export default async function OnboardingPage() {
   let telegramLinked = false;
   let ingestToken = "";
 
+  const prisma = getPrisma();
   try {
     const [user, properties, cleaners] = await Promise.all([
       prisma.user.findUnique({
@@ -42,27 +42,25 @@ export default async function OnboardingPage() {
     if (properties.length > 0) {
       firstPropertyId = properties[0].id;
       firstPropertyName = properties[0].name;
-      initialStep = Math.max(initialStep, 2);
-    }
+      initialStep = 2; // has property → move to cleaner step
 
-    if (cleaners.length > 0) {
-      firstCleanerId = cleaners[0].id;
-      firstCleanerName = cleaners[0].name;
-      initialStep = Math.max(initialStep, 3);
-    }
+      if (cleaners.length > 0) {
+        firstCleanerId = cleaners[0].id;
+        firstCleanerName = cleaners[0].name;
+        initialStep = 3; // has cleaner → move to assignment step
 
-    if (firstPropertyId && firstCleanerId) {
-      const hasAssignment = await prisma.propertyCleaner.count({
-        where: { property_id: firstPropertyId },
-      });
-      if (hasAssignment > 0) initialStep = Math.max(initialStep, 4);
-    }
+        const assignmentCount = await prisma.propertyCleaner.count({
+          where: { property_id: firstPropertyId },
+        });
 
-    if (telegramLinked) initialStep = Math.max(initialStep, 5);
+        if (assignmentCount > 0) {
+          initialStep = 4; // has assignment → move to Telegram step
 
-    // All required steps done — redirect to dashboard
-    if (initialStep >= 5 && telegramLinked) {
-      redirect("/dashboard");
+          if (telegramLinked) {
+            initialStep = 5; // has Telegram → move to email forwarding step (optional)
+          }
+        }
+      }
     }
   } finally {
     await prisma.$disconnect();

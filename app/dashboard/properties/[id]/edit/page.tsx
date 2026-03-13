@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { DashboardHeader } from "../../../dashboard-header";
 import { PropertyForm } from "../../property-form";
@@ -57,8 +58,26 @@ export default async function EditPropertyPage({
           initialNameBookingCom={property.name_booking_com ?? ""}
           initialNameAirbnb={property.name_airbnb ?? ""}
           initialNameVrbo={property.name_vrbo ?? ""}
+          hideButtons
         />
         <PropertyCleaners propertyId={property.id} allCleaners={allCleaners} />
+
+        {/* Save/Cancel anchored below the cleaners section */}
+        <div className="mt-6 flex gap-3 border-t border-zinc-200 pt-6">
+          <button
+            type="submit"
+            form="property-details-form"
+            className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
+          >
+            Save changes
+          </button>
+          <Link
+            href="/dashboard/properties"
+            className="rounded-lg border border-zinc-300 bg-white px-5 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Cancel
+          </Link>
+        </div>
       </main>
     </div>
   );

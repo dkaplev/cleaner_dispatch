@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type Props =
-  | { action: "create" }
+  | { action: "create"; hideButtons?: never }
   | {
       action: "edit";
       id: string;
@@ -18,6 +18,8 @@ type Props =
       initialNameBookingCom?: string;
       initialNameAirbnb?: string;
       initialNameVrbo?: string;
+      /** When true the form renders without action buttons (used when buttons are placed below the cleaner section). */
+      hideButtons?: boolean;
     };
 
 export function PropertyForm(props: Props) {
@@ -26,6 +28,7 @@ export function PropertyForm(props: Props) {
   const [error, setError] = useState("");
 
   const isEdit = props.action === "edit";
+  const hideButtons = isEdit && "hideButtons" in props ? (props.hideButtons ?? false) : false;
   const [name, setName] = useState(isEdit ? props.initialName : "");
   const [checkoutTime, setCheckoutTime] = useState(isEdit ? props.initialCheckoutTime : "");
   const [checkinTime, setCheckinTime] = useState(isEdit ? props.initialCheckinTime : "");
@@ -91,7 +94,11 @@ export function PropertyForm(props: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+    <form
+      id="property-details-form"
+      onSubmit={handleSubmit}
+      className="mt-6 space-y-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm"
+    >
       {error && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
@@ -229,21 +236,23 @@ export function PropertyForm(props: Props) {
           </div>
         </>
       )}
-      <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
-        >
-          {loading ? "Saving…" : isEdit ? "Save changes" : "Add property"}
-        </button>
-        <Link
-          href="/dashboard/properties"
-          className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-        >
-          Cancel
-        </Link>
-      </div>
+      {!hideButtons && (
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+          >
+            {loading ? "Saving…" : isEdit ? "Save changes" : "Add property"}
+          </button>
+          <Link
+            href="/dashboard/properties"
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Cancel
+          </Link>
+        </div>
+      )}
     </form>
   );
 }
