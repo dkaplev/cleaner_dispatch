@@ -5,19 +5,31 @@ import { getPrisma } from "@/lib/prisma";
 import { DashboardHeader } from "./dashboard-header";
 import { LandlordTelegramLink } from "./landlord-telegram-link";
 import { TelegramTest } from "./telegram-test";
+import { SetupChecklist } from "./setup-checklist";
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
   let telegramChatId: string | null = null;
+  let hasProperty = false;
+  let hasCleaner = false;
+  let hasPropertyCleaner = false;
+
   try {
     const prisma = getPrisma();
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { id: true, telegram_chat_id: true },
-    });
+    const [user, properties, cleaners] = await Promise.all([
+      prisma.user.findUnique({ where: { id: session.user.id }, select: { telegram_chat_id: true } }),
+      prisma.property.findFirst({ where: { landlord_id: session.user.id }, select: { id: true } }),
+      prisma.cleaner.findFirst({ where: { landlord_id: session.user.id }, select: { id: true } }),
+    ]);
     telegramChatId = user?.telegram_chat_id ?? null;
+    hasProperty = !!properties;
+    hasCleaner = !!cleaners;
+    if (properties?.id) {
+      const pc = await prisma.propertyCleaner.findFirst({ where: { property_id: properties.id }, select: { cleaner_id: true } });
+      hasPropertyCleaner = !!pc;
+    }
   } catch {
     // ignore
   }
@@ -31,7 +43,42 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-zinc-50 p-6">
       <DashboardHeader userEmail={session.user.email ?? ""} />
-      <main className="mt-8">
+      <main className="mt-8 space-y-4">
+        <SetupChecklist
+          items={[
+            {
+              label: "Add your first property",
+              done: hasProperty,
+              href: "/onboarding",
+              cta: "Add property",
+            },
+            {
+              label: "Add a cleaner",
+              done: hasCleaner,
+              href: "/onboarding",
+              cta: "Add cleaner",
+            },
+            {
+              label: "Assign cleaner to property",
+              done: hasPropertyCleaner,
+              href: "/onboarding",
+              cta: "Assign",
+            },
+            {
+              label: "Link your Telegram for notifications",
+              done: !!telegramChatId,
+              href: "/onboarding",
+              cta: "Link Telegram",
+            },
+            {
+              label: "Set up email forwarding for auto job creation",
+              done: false,
+              href: "/dashboard/integrations",
+              cta: "Set up",
+              optional: true,
+            },
+          ]}
+        />
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-medium text-zinc-900">Welcome</h2>
           <p className="mt-2 text-zinc-600">

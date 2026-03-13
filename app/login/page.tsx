@@ -12,6 +12,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered") === "1";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,7 +23,7 @@ function LoginForm() {
         email: email.trim().toLowerCase(),
         password,
         redirect: false,
-        callbackUrl: "/dashboard",
+        callbackUrl,
       });
       if (result?.error) {
         setError("Invalid email or password");

@@ -26,7 +26,7 @@ export default function SignupPage() {
         setError(data.error || "Sign up failed");
         return;
       }
-      router.push("/login?registered=1");
+      router.push("/login?registered=1&callbackUrl=/onboarding");
     } finally {
       setLoading(false);
     }
@@ -37,6 +37,9 @@ export default function SignupPage() {
       <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
         <h1 className="text-xl font-semibold text-zinc-900">Create account</h1>
         <p className="mt-1 text-sm text-zinc-500">Cleaner Dispatch — Landlord</p>
+        <div className="mt-3 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
+          💡 Use the email address where you receive booking confirmations from Airbnb, Booking.com, or Vrbo — this enables automatic job creation.
+        </div>
         {error && (
           <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             {error}

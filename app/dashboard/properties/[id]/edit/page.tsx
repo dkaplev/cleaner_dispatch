@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { DashboardHeader } from "../../../dashboard-header";
 import { PropertyForm } from "../../property-form";
+import { PropertyCleaners } from "../../property-cleaners";
 
 export default async function EditPropertyPage({
   params,
@@ -15,11 +16,13 @@ export default async function EditPropertyPage({
 
   let prisma;
   let property: { id: string; name: string; checkout_time_default: Date | null; checkin_time_default: Date | null; cleaning_duration_minutes: number | null; instructions_text: string | null; cleaning_trigger: string; name_booking_com: string | null; name_airbnb: string | null; name_vrbo: string | null } | null = null;
+  let allCleaners: { id: string; name: string; telegram_chat_id: string | null }[] = [];
   try {
     prisma = getPrisma();
-    property = await prisma.property.findFirst({
-      where: { id, landlord_id: session.user.id },
-    });
+    [property, allCleaners] = await Promise.all([
+      prisma.property.findFirst({ where: { id, landlord_id: session.user.id } }),
+      prisma.cleaner.findMany({ where: { landlord_id: session.user.id }, orderBy: { name: "asc" }, select: { id: true, name: true, telegram_chat_id: true } }),
+    ]);
   } finally {
     if (prisma) await prisma.$disconnect();
   }
@@ -55,6 +58,7 @@ export default async function EditPropertyPage({
           initialNameAirbnb={property.name_airbnb ?? ""}
           initialNameVrbo={property.name_vrbo ?? ""}
         />
+        <PropertyCleaners propertyId={property.id} allCleaners={allCleaners} />
       </main>
     </div>
   );
