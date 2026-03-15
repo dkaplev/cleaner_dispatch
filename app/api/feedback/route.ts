@@ -39,9 +39,10 @@ export async function POST(request: Request) {
       };
       const label = labelMap[category] ?? category;
       try {
-        await sendTelegramMessage(
+        // Telegram hard limit is 4096 chars; our max message is 2000, so no truncation needed
+      await sendTelegramMessage(
           adminChatId,
-          `${label} from <b>${session.user.email}</b>\n\n${message.slice(0, 500)}${message.length > 500 ? "…" : ""}`
+          `${label} from <b>${session.user.email}</b>\n\n${message}`
         );
       } catch (e) {
         console.error("[feedback] Admin Telegram notify failed:", e);
