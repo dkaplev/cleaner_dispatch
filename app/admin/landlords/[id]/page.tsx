@@ -59,7 +59,7 @@ export default async function AdminLandlordDetailPage({
             name_vrbo: true,
             cleaning_trigger: true,
             created_at: true,
-            cleaners: {
+            property_cleaners: {
               select: {
                 is_primary: true,
                 cleaner: { select: { id: true, name: true, telegram_chat_id: true } },
@@ -95,7 +95,7 @@ export default async function AdminLandlordDetailPage({
 
     const hasProp    = landlord.properties.length > 0;
     const hasCleaner = landlord.cleaners.length > 0;
-    const hasAssign  = landlord.properties.some((p) => p.cleaners.length > 0);
+    const hasAssign  = landlord.properties.some((p) => p.property_cleaners.length > 0);
     const hasTg      = !!landlord.telegram_chat_id;
     const setupScore = (hasProp ? 25 : 0) + (hasCleaner ? 25 : 0) + (hasAssign ? 25 : 0) + (hasTg ? 25 : 0);
 
@@ -165,9 +165,9 @@ export default async function AdminLandlordDetailPage({
                       {p.cleaning_trigger ?? "after_checkout"}
                     </span>
                   </div>
-                  {p.cleaners.length > 0 && (
+                  {p.property_cleaners.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                      {p.cleaners.map((pc) => (
+                      {p.property_cleaners.map((pc) => (
                         <span
                           key={pc.cleaner.id}
                           className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
@@ -180,7 +180,7 @@ export default async function AdminLandlordDetailPage({
                       ))}
                     </div>
                   )}
-                  {p.cleaners.length === 0 && (
+                  {p.property_cleaners.length === 0 && (
                     <p className="mt-1 text-[11px] text-[#c47a50]">⚠ No cleaner assigned</p>
                   )}
                 </div>
