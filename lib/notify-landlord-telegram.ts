@@ -44,7 +44,8 @@ export async function notifyLandlordJobAccepted(
 }
 
 /**
- * Send when a cleaner declines. Landlord knows we're trying the next cleaner or that they need to step in.
+ * Send when a cleaner declines. If a fallback exists, shows who's next.
+ * If no fallback, sends an urgent alert with a CTA to manage manually.
  */
 export async function notifyLandlordJobDeclined(
   landlordChatId: string | null | undefined,
@@ -54,22 +55,72 @@ export async function notifyLandlordJobDeclined(
   nextCleanerName?: string
 ): Promise<void> {
   if (!landlordChatId?.trim()) return;
-  const nextLine = nextCleanerName
-    ? `We've offered the job to <b>${escapeTg(nextCleanerName)}</b>.`
-    : "No other cleaner available — please assign in the dashboard.";
-  const text =
-    `❌ <b>Job declined</b>\n\n` +
-    `<b>${escapeTg(propertyName)}</b> — ${escapeTg(cleanerName)} declined. ${nextLine}`;
   const url = dashboardJobUrl(jobId);
-  if (url) {
-    await sendTelegramMessageWithUrlButton(
-      landlordChatId,
-      text,
-      "View job",
-      url
-    );
+
+  if (nextCleanerName) {
+    const text =
+      `❌ <b>Job declined</b>\n\n` +
+      `<b>${escapeTg(propertyName)}</b> — ${escapeTg(cleanerName)} declined.\n` +
+      `Offering to <b>${escapeTg(nextCleanerName)}</b> now.`;
+    if (url) {
+      await sendTelegramMessageWithUrlButton(landlordChatId, text, "View job", url);
+    } else {
+      await sendTelegramMessage(landlordChatId, text);
+    }
   } else {
-    await sendTelegramMessage(landlordChatId, text);
+    // No fallback — urgent: landlord must step in
+    const text =
+      `🚨 <b>Action needed — no cleaner available</b>\n\n` +
+      `<b>${escapeTg(propertyName)}</b>\n` +
+      `${escapeTg(cleanerName)} declined and there is no backup cleaner configured for this property.\n\n` +
+      `Please open the job and assign a cleaner manually.\n\n` +
+      `💡 <i>Tip: add a fallback cleaner in Properties → Edit to avoid this in the future.</i>`;
+    if (url) {
+      await sendTelegramMessageWithUrlButton(landlordChatId, text, "📋 Manage job", url);
+    } else {
+      await sendTelegramMessage(landlordChatId, text);
+    }
+  }
+}
+
+/**
+ * Send when a cleaner didn't respond within the timeout window and the cron re-dispatches.
+ * If a fallback exists, reassures the landlord. If not, sends an urgent alert.
+ */
+export async function notifyLandlordJobTimedOut(
+  landlordChatId: string | null | undefined,
+  propertyName: string,
+  timedOutCleanerName: string,
+  jobId: string,
+  nextCleanerName?: string
+): Promise<void> {
+  if (!landlordChatId?.trim()) return;
+  const url = dashboardJobUrl(jobId);
+
+  if (nextCleanerName) {
+    const text =
+      `⏰ <b>No response — trying next cleaner</b>\n\n` +
+      `<b>${escapeTg(propertyName)}</b>\n` +
+      `${escapeTg(timedOutCleanerName)} didn't respond in time.\n` +
+      `Offering the job to <b>${escapeTg(nextCleanerName)}</b> now.`;
+    if (url) {
+      await sendTelegramMessageWithUrlButton(landlordChatId, text, "View job", url);
+    } else {
+      await sendTelegramMessage(landlordChatId, text);
+    }
+  } else {
+    // All cleaners exhausted — landlord must act
+    const text =
+      `🚨 <b>Action needed — no cleaner responded</b>\n\n` +
+      `<b>${escapeTg(propertyName)}</b>\n` +
+      `${escapeTg(timedOutCleanerName)} didn't respond and there is no backup cleaner configured for this property.\n\n` +
+      `Please open the job and assign a cleaner manually.\n\n` +
+      `💡 <i>Tip: add a fallback cleaner in Properties → Edit so the next booking is handled automatically.</i>`;
+    if (url) {
+      await sendTelegramMessageWithUrlButton(landlordChatId, text, "📋 Manage job", url);
+    } else {
+      await sendTelegramMessage(landlordChatId, text);
+    }
   }
 }
 
