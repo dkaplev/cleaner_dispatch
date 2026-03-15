@@ -24,8 +24,21 @@ model User {
   properties       Property[]
   cleaners         Cleaner[]
   jobs             Job[]
+  feedback         Feedback[]
 
   @@map("users")
+}
+
+model Feedback {
+  id          String    @id @default(cuid())
+  user_id     String
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  category    String    @default("general") // general | bug | feature | testimonial
+  message     String
+  status      String    @default("new")     // new | reviewed | archived
+  created_at  DateTime  @default(now())
+
+  @@map("feedback")
 }
 
 model PasswordResetToken {

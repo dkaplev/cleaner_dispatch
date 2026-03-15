@@ -5,6 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { DashboardHeader } from "./dashboard-header";
 import { SetupChecklist } from "./setup-checklist";
 import { JobsOverview } from "./jobs-overview";
+import { FeedbackWidget } from "./feedback-widget";
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 
@@ -270,6 +271,9 @@ export default async function DashboardPage() {
             {" "}<Link href="/onboarding" className="underline decoration-[#c5bdb4] hover:text-[#4a443e]">Setup guide</Link>
           </p>
         )}
+
+        {/* ── Feedback ── */}
+        <FeedbackWidget />
 
       </main>
     </div>
