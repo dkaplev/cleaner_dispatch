@@ -77,9 +77,9 @@ export default async function AdminLandlordDetailPage({
           select: {
             id: true,
             status: true,
-            source: true,
-            checkout_date: true,
-            checkin_date: true,
+            window_start: true,
+            window_end: true,
+            booking_id: true,
             created_at: true,
             property: { select: { name: true } },
           },
@@ -220,8 +220,8 @@ export default async function AdminLandlordDetailPage({
                 <thead>
                   <tr className="border-b border-[#f0ebe3] text-[10px] font-semibold uppercase tracking-[0.1em] text-[#6a625c]">
                     <th className="pb-2 text-left">Property</th>
-                    <th className="pb-2 text-left">Source</th>
-                    <th className="pb-2 text-left">Checkout</th>
+                    <th className="pb-2 text-left">Window</th>
+                    <th className="pb-2 text-left">Booking ID</th>
                     <th className="pb-2 text-left">Status</th>
                     <th className="pb-2 text-left">Created</th>
                   </tr>
@@ -230,10 +230,10 @@ export default async function AdminLandlordDetailPage({
                   {landlord.jobs.map((j) => (
                     <tr key={j.id} className="text-xs text-[#4a443e]">
                       <td className="py-2 pr-4 font-medium">{j.property.name}</td>
-                      <td className="py-2 pr-4 capitalize text-[#7d7570]">{j.source ?? "—"}</td>
                       <td className="py-2 pr-4 text-[#7d7570]">
-                        {j.checkout_date ? new Date(j.checkout_date).toLocaleDateString() : "—"}
+                        {new Date(j.window_start).toLocaleDateString()} – {new Date(j.window_end).toLocaleDateString()}
                       </td>
+                      <td className="py-2 pr-4 text-[#9a9089]">{j.booking_id ?? "—"}</td>
                       <td className="py-2 pr-4">
                         <Chip
                           label={j.status.replace(/_/g, " ")}
