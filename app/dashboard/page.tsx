@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { DashboardHeader } from "./dashboard-header";
 import { SetupChecklist } from "./setup-checklist";
+import { JobsOverview } from "./jobs-overview";
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 
@@ -19,10 +20,12 @@ function StatCard({
   href?: string;
 }) {
   const inner = (
-    <div className="rounded-2xl border border-[#e3dcd1] bg-[#fbf9f5] p-5">
+    <div className="flex min-h-[104px] flex-col justify-between rounded-2xl border border-[#e3dcd1] bg-[#fbf9f5] p-5">
       <p className="text-xs font-medium tracking-[0.12em] uppercase text-[#6a625c]">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-[#3c3732]">{value}</p>
-      {sub && <p className="mt-1 text-xs text-[#7d7570]">{sub}</p>}
+      <div>
+        <p className="text-3xl font-semibold tracking-tight text-[#3c3732]">{value}</p>
+        <p className="mt-1 text-xs text-[#7d7570]">{sub ?? "\u00A0"}</p>
+      </div>
     </div>
   );
   if (href) {
@@ -194,6 +197,14 @@ export default async function DashboardPage() {
           </div>
         </section>
 
+        {/* ── Job status chart ── */}
+        <JobsOverview
+          waiting={jobsPending}
+          active={jobsActive}
+          review={jobsReview}
+          completed={jobsCompleted}
+        />
+
         {/* ── Nav cards ── */}
         <section>
           <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">Manage</p>
@@ -201,7 +212,7 @@ export default async function DashboardPage() {
             <NavCard
               title="Jobs"
               description="Review all cleaning jobs, check statuses, and dispatch manually when needed."
-              href="/dashboard/jobs"
+              href="/dashboard/cleanings"
               badge={jobsPending + jobsActive + jobsReview > 0 ? jobsPending + jobsActive + jobsReview : undefined}
             />
             <NavCard
