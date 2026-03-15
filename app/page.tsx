@@ -76,12 +76,22 @@ const faqs = [
   },
 ];
 
+// ── Palette ────────────────────────────────────────────────────────────────────
+// bg:       white / #faf5ec (section alt) / #fff8f0 (card tint)
+// text-h:   #1a1510  (near-black espresso)
+// text-b:   #3d342c  (dark warm brown)
+// text-m:   #6b5f54  (muted)
+// text-sub: #9c8a7c  (subtle)
+// accent:   #c45c0f  (amber-rust — CTAs, highlights, "Cleaned.")
+// acc-hov:  #a34c0c
+// border:   #e8d9c5
+
 // ── Components ────────────────────────────────────────────────────────────────
 
 function CheckIcon({ ok }: { ok: boolean }) {
   if (ok) {
     return (
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#4b443e] text-[10px] text-[#f8f6f1]">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#c45c0f] text-[10px] text-white">
         ✓
       </span>
     );
@@ -96,10 +106,10 @@ function CheckIcon({ ok }: { ok: boolean }) {
 // Inline Telegram-style dispatch card (pure HTML/CSS mockup)
 function TelegramMockup() {
   return (
-    <div className="mx-auto max-w-[320px] rounded-2xl border border-[#e5dfd4] bg-white p-4 shadow-lg">
+    <div className="mx-auto max-w-[320px] rounded-2xl border border-[#e8d9c5] bg-white p-4 shadow-xl">
       {/* header bar */}
-      <div className="flex items-center gap-2 border-b border-[#f0ebe4] pb-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#4b443e] text-xs font-bold text-white">
+      <div className="flex items-center gap-2 border-b border-[#f0e6d7] pb-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#c45c0f] text-xs font-bold text-white">
           CD
         </div>
         <div>
@@ -120,10 +130,10 @@ function TelegramMockup() {
       </div>
       {/* buttons */}
       <div className="mt-2 flex gap-2">
-        <button className="flex-1 rounded-lg bg-[#4b443e] py-1.5 text-xs font-medium text-white">
+        <button className="flex-1 rounded-lg bg-[#c45c0f] py-1.5 text-xs font-medium text-white">
           ✅ Accept
         </button>
-        <button className="flex-1 rounded-lg border border-[#e3dcd1] py-1.5 text-xs font-medium text-zinc-600">
+        <button className="flex-1 rounded-lg border border-[#e8d9c5] py-1.5 text-xs font-medium text-zinc-600">
           ❌ Decline
         </button>
       </div>
@@ -137,30 +147,30 @@ function TelegramMockup() {
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#f8f6f2] text-[#3f3a35]">
+    <div className="min-h-screen bg-white text-[#1a1510]">
 
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-50 border-b border-[#ede8e1] bg-[#f8f6f2]/90 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 border-b border-[#e8d9c5] bg-white/90 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4 md:px-10">
-          <a href="/" className="text-sm font-semibold tracking-[0.18em] uppercase text-[#4f4842]">
+          <a href="/" className="text-sm font-semibold tracking-[0.18em] uppercase text-[#1a1510]">
             Cleaner Dispatch
           </a>
           <nav className="flex items-center gap-3">
-            <a href="#how-it-works" className="hidden text-sm text-[#6a625c] hover:text-[#3f3a35] md:block">
+            <a href="#how-it-works" className="hidden text-sm text-[#6b5f54] hover:text-[#1a1510] md:block">
               How it works
             </a>
-            <a href="#faq" className="hidden text-sm text-[#6a625c] hover:text-[#3f3a35] md:block">
+            <a href="#faq" className="hidden text-sm text-[#6b5f54] hover:text-[#1a1510] md:block">
               FAQ
             </a>
             <a
               href="/login"
-              className="rounded-full px-4 py-2 text-sm font-medium text-[#5a524c] transition hover:bg-[#ede8e1]"
+              className="rounded-full px-4 py-2 text-sm font-medium text-[#3d342c] transition hover:bg-[#f5ead5]"
             >
               Sign in
             </a>
             <a
               href="/signup"
-              className="rounded-full bg-[#4b443e] px-5 py-2 text-sm font-medium text-[#f8f6f1] transition hover:bg-[#3f3934]"
+              className="rounded-full bg-[#c45c0f] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#a34c0c]"
             >
               Get started free
             </a>
@@ -175,49 +185,49 @@ export default function Home() {
           <div className="grid items-center gap-12 md:grid-cols-2">
             {/* left: copy */}
             <div>
-              <p className="mb-4 inline-block rounded-full border border-[#e4ddd3] bg-[#f5f1ea] px-4 py-1 text-xs font-medium tracking-[0.15em] uppercase text-[#5f5751]">
+              <p className="mb-4 inline-block rounded-full border border-[#e8d9c5] bg-[#fff3e3] px-4 py-1 text-xs font-medium tracking-[0.15em] uppercase text-[#c45c0f]">
                 Early access — free to try
               </p>
-              <h1 className="text-4xl font-semibold leading-tight tracking-tight text-[#3c3732] md:text-5xl lg:text-6xl">
+              <h1 className="text-4xl font-semibold leading-tight tracking-tight text-[#1a1510] md:text-5xl lg:text-6xl">
                 Every booking.
                 <br />
-                <span className="text-[#7a6e65]">Cleaned.</span>
+                <span className="text-[#c45c0f]">Cleaned.</span>
               </h1>
-              <p className="mt-6 max-w-lg text-base leading-relaxed text-[#5d554f] md:text-lg">
+              <p className="mt-6 max-w-lg text-base leading-relaxed text-[#3d342c] md:text-lg">
                 Cleaner Dispatch turns booking confirmation emails into dispatched cleaning jobs — automatically. Your cleaner gets the offer on Telegram, accepts in one tap, and sends you photo proof when done.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a
                   href="/signup"
-                  className="rounded-full bg-[#4b443e] px-7 py-3.5 text-sm font-medium text-[#f8f6f1] transition hover:bg-[#3f3934]"
+                  className="rounded-full bg-[#c45c0f] px-7 py-3.5 text-sm font-medium text-white transition hover:bg-[#a34c0c]"
                 >
                   Start for free →
                 </a>
                 <a
                   href="#how-it-works"
-                  className="rounded-full border border-[#d6cfc4] bg-[#f9f6f0] px-7 py-3.5 text-sm font-medium text-[#4f4842] transition hover:bg-[#f1ece4]"
+                  className="rounded-full border border-[#d9c4a8] bg-[#faf5ec] px-7 py-3.5 text-sm font-medium text-[#1a1510] transition hover:bg-[#f0e6d7]"
                 >
                   See how it works
                 </a>
               </div>
-              <p className="mt-4 text-xs text-[#9a9089]">No credit card required · Setup in 10 minutes</p>
+              <p className="mt-4 text-xs text-[#9c8a7c]">No credit card required · Setup in 10 minutes</p>
             </div>
             {/* right: telegram mockup */}
             <div className="flex justify-center md:justify-end">
               <div className="relative">
                 {/* subtle backdrop glow */}
-                <div className="absolute -inset-4 rounded-3xl bg-[#ece5dc]/50 blur-2xl" />
+                <div className="absolute -inset-4 rounded-3xl bg-[#fde8cc]/60 blur-2xl" />
                 <div className="relative">
                   <TelegramMockup />
                   {/* floating "booking received" badge */}
-                  <div className="absolute -top-4 -right-4 rounded-xl border border-[#e5dfd4] bg-white px-3 py-2 shadow-md">
-                    <p className="text-[10px] font-semibold text-[#4b443e]">📩 Booking received</p>
-                    <p className="text-[9px] text-[#7d7570]">Airbnb · 3 nights · Auto-dispatched</p>
+                  <div className="absolute -top-4 -right-4 rounded-xl border border-[#e8d9c5] bg-white px-3 py-2 shadow-md">
+                    <p className="text-[10px] font-semibold text-[#1a1510]">📩 Booking received</p>
+                    <p className="text-[9px] text-[#6b5f54]">Airbnb · 3 nights · Auto-dispatched</p>
                   </div>
                   {/* floating "photo proof" badge */}
-                  <div className="absolute -bottom-4 -left-4 rounded-xl border border-[#e5dfd4] bg-white px-3 py-2 shadow-md">
-                    <p className="text-[10px] font-semibold text-[#4b443e]">📸 Cleaning done</p>
-                    <p className="text-[9px] text-[#7d7570]">4 photos uploaded · Ready for guest</p>
+                  <div className="absolute -bottom-4 -left-4 rounded-xl border border-[#e8d9c5] bg-white px-3 py-2 shadow-md">
+                    <p className="text-[10px] font-semibold text-[#1a1510]">📸 Cleaning done</p>
+                    <p className="text-[9px] text-[#6b5f54]">4 photos uploaded · Ready for guest</p>
                   </div>
                 </div>
               </div>
@@ -226,9 +236,9 @@ export default function Home() {
         </section>
 
         {/* ── PAIN STRIP ── */}
-        <section className="border-y border-[#e5dfd4] bg-[#fdfcf9]">
+        <section className="border-y border-[#e8d9c5] bg-[#faf5ec]">
           <div className="mx-auto max-w-6xl px-6 py-8 md:px-10">
-            <p className="mb-6 text-center text-xs font-medium uppercase tracking-[0.15em] text-[#7d7570]">
+            <p className="mb-6 text-center text-xs font-medium uppercase tracking-[0.15em] text-[#6b5f54]">
               Sound familiar?
             </p>
             <div className="grid gap-4 md:grid-cols-3">
@@ -239,10 +249,10 @@ export default function Home() {
               ].map((item) => (
                 <div
                   key={item.text}
-                  className="flex items-start gap-3 rounded-2xl border border-[#e8e2d8] bg-[#f5f1ea] px-5 py-4"
+                  className="flex items-start gap-3 rounded-2xl border border-[#e8d9c5] bg-white px-5 py-4 shadow-sm"
                 >
                   <span className="text-xl">{item.emoji}</span>
-                  <p className="text-sm italic leading-6 text-[#5d554f]">{item.text}</p>
+                  <p className="text-sm italic leading-6 text-[#3d342c]">{item.text}</p>
                 </div>
               ))}
             </div>
@@ -252,13 +262,13 @@ export default function Home() {
         {/* ── SECTION 2: BENEFITS ── */}
         <section className="mx-auto w-full max-w-6xl px-6 py-16 md:px-10 md:py-24">
           <div className="text-center">
-            <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">
+            <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#c45c0f]">
               The solution
             </p>
-            <h2 className="text-3xl font-semibold tracking-tight text-[#3c3732] md:text-4xl">
+            <h2 className="text-3xl font-semibold tracking-tight text-[#1a1510] md:text-4xl">
               Less coordination. More confidence.
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[#5d554f]">
+            <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[#3d342c]">
               Cleaner Dispatch handles the entire chain — from booking to clean — so you can focus on your guests, not your group chats.
             </p>
           </div>
@@ -266,24 +276,24 @@ export default function Home() {
             {benefits.map((b) => (
               <article
                 key={b.title}
-                className="rounded-2xl border border-[#e3dcd1] bg-[#fbf9f5] p-7"
+                className="rounded-2xl border border-[#e8d9c5] bg-white p-7 shadow-sm"
               >
                 <span className="text-3xl">{b.icon}</span>
-                <h3 className="mt-4 text-lg font-semibold text-[#3f3934]">{b.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-[#615952]">{b.body}</p>
+                <h3 className="mt-4 text-lg font-semibold text-[#1a1510]">{b.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-[#3d342c]">{b.body}</p>
               </article>
             ))}
           </div>
         </section>
 
         {/* ── SECTION 3: HOW IT WORKS ── */}
-        <section id="how-it-works" className="border-y border-[#e5dfd4] bg-[#fdfbf7]">
+        <section id="how-it-works" className="border-y border-[#e8d9c5] bg-[#faf5ec]">
           <div className="mx-auto w-full max-w-6xl px-6 py-16 md:px-10 md:py-24">
             <div className="text-center">
-              <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">
+              <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#c45c0f]">
                 How it works
               </p>
-              <h2 className="text-3xl font-semibold tracking-tight text-[#3c3732] md:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-[#1a1510] md:text-4xl">
                 Three steps. Zero chasing.
               </h2>
             </div>
@@ -291,12 +301,12 @@ export default function Home() {
               {steps.map((s, i) => (
                 <div key={s.n} className="relative">
                   {i < steps.length - 1 && (
-                    <div className="absolute top-7 left-full z-10 hidden h-px w-full -translate-x-3 bg-[#ddd6cb] md:block" />
+                    <div className="absolute top-7 left-full z-10 hidden h-px w-full -translate-x-3 bg-[#e0cdb3] md:block" />
                   )}
-                  <div className="rounded-2xl border border-[#e6dfd5] bg-[#f8f4ed] p-6">
-                    <span className="text-2xl font-bold tracking-tight text-[#c5bdb4]">{s.n}</span>
-                    <h3 className="mt-3 text-base font-semibold text-[#3f3934]">{s.title}</h3>
-                    <p className="mt-2 text-sm leading-7 text-[#5e5650]">{s.body}</p>
+                  <div className="rounded-2xl border border-[#e8d9c5] bg-white p-6 shadow-sm">
+                    <span className="text-2xl font-bold tracking-tight text-[#c45c0f]">{s.n}</span>
+                    <h3 className="mt-3 text-base font-semibold text-[#1a1510]">{s.title}</h3>
+                    <p className="mt-2 text-sm leading-7 text-[#3d342c]">{s.body}</p>
                   </div>
                 </div>
               ))}
@@ -309,13 +319,13 @@ export default function Home() {
           <div className="grid items-center gap-12 md:grid-cols-2">
             {/* copy */}
             <div>
-              <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">
+              <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#c45c0f]">
                 Always in the loop
               </p>
-              <h2 className="text-3xl font-semibold tracking-tight text-[#3c3732] md:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-[#1a1510] md:text-4xl">
                 Know exactly what&apos;s happening — before your guest does.
               </h2>
-              <p className="mt-5 text-base leading-relaxed text-[#5d554f]">
+              <p className="mt-5 text-base leading-relaxed text-[#3d342c]">
                 Every key event lands in your Telegram: booking arrived, cleaner accepted, cleaning done, photos uploaded. If anything goes wrong — cleaner declined, no response — you get an alert with a one-tap link to fix it.
               </p>
               <ul className="mt-6 space-y-3">
@@ -325,8 +335,8 @@ export default function Home() {
                   "📸 Cleaning done — 4 photos uploaded",
                   "🚨 No response — manual action needed",
                 ].map((item) => (
-                  <li key={item} className="flex items-start gap-3 text-sm text-[#4a443e]">
-                    <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#4b443e] translate-y-1.5" />
+                  <li key={item} className="flex items-start gap-3 text-sm text-[#1a1510]">
+                    <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c45c0f] translate-y-1.5" />
                     {item}
                   </li>
                 ))}
@@ -336,52 +346,52 @@ export default function Home() {
             <div className="flex justify-center">
               <div className="w-full max-w-sm space-y-3">
                 {[
-                  { icon: "📩", title: "New booking — Sea View Apt", sub: "Airbnb · Checkout Fri 28 Jun · Auto-dispatched", color: "bg-[#f5f1ea]" },
+                  { icon: "📩", title: "New booking — Sea View Apt", sub: "Airbnb · Checkout Fri 28 Jun · Auto-dispatched", color: "bg-[#fff3e3]" },
                   { icon: "✅", title: "Anna K. accepted", sub: "Sea View Apt · Fri 28 Jun 11:00–15:00", color: "bg-[#eef5ee]" },
                   { icon: "📸", title: "Cleaning done — review ready", sub: "4 photos uploaded · Rate the cleaning", color: "bg-[#f0f5ff]" },
                 ].map((n) => (
                   <div
                     key={n.title}
-                    className={`flex items-start gap-3 rounded-2xl border border-[#e5dfd4] ${n.color} px-4 py-3.5 shadow-sm`}
+                    className={`flex items-start gap-3 rounded-2xl border border-[#e8d9c5] ${n.color} px-4 py-3.5 shadow-sm`}
                   >
                     <span className="text-xl">{n.icon}</span>
                     <div>
-                      <p className="text-sm font-semibold text-[#3c3732]">{n.title}</p>
-                      <p className="text-xs text-[#6a625c]">{n.sub}</p>
+                      <p className="text-sm font-semibold text-[#1a1510]">{n.title}</p>
+                      <p className="text-xs text-[#6b5f54]">{n.sub}</p>
                     </div>
                   </div>
                 ))}
-                <p className="text-center text-xs text-[#9a9089]">Your Telegram, not a new app</p>
+                <p className="text-center text-xs text-[#9c8a7c]">Your Telegram, not a new app</p>
               </div>
             </div>
           </div>
         </section>
 
         {/* ── SECTION 5: WHY US / COMPARISON ── */}
-        <section className="border-y border-[#e5dfd4] bg-[#fdfcf9]">
+        <section className="border-y border-[#e8d9c5] bg-[#faf5ec]">
           <div className="mx-auto w-full max-w-4xl px-6 py-16 md:px-10 md:py-24">
             <div className="text-center">
-              <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">
+              <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#c45c0f]">
                 Why Cleaner Dispatch
               </p>
-              <h2 className="text-3xl font-semibold tracking-tight text-[#3c3732] md:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-[#1a1510] md:text-4xl">
                 Built for how cleaning actually works.
               </h2>
-              <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-[#5d554f]">
+              <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-[#3d342c]">
                 Not a generic task manager. Purpose-built for short-term rental hosts who need reliably clean properties — without being a full-time coordinator.
               </p>
             </div>
-            <div className="mt-10 overflow-hidden rounded-2xl border border-[#e3dcd1]">
+            <div className="mt-10 overflow-hidden rounded-2xl border border-[#e8d9c5] shadow-sm">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[#e3dcd1] bg-[#f5f1ea]">
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[#6a625c]">
+                  <tr className="border-b border-[#e8d9c5] bg-[#fff3e3]">
+                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[#6b5f54]">
                       Feature
                     </th>
-                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-[#4b443e]">
+                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-[#c45c0f]">
                       Cleaner Dispatch
                     </th>
-                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-[#9a9089]">
+                    <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-[#9c8a7c]">
                       Manual / WhatsApp
                     </th>
                   </tr>
@@ -390,9 +400,9 @@ export default function Home() {
                   {differentiators.map((row, i) => (
                     <tr
                       key={row.label}
-                      className={i % 2 === 0 ? "bg-[#fbf9f5]" : "bg-[#f8f4ef]"}
+                      className={i % 2 === 0 ? "bg-white" : "bg-[#faf5ec]"}
                     >
-                      <td className="px-5 py-3 text-[#4a443e]">{row.label}</td>
+                      <td className="px-5 py-3 text-[#1a1510]">{row.label}</td>
                       <td className="px-5 py-3 text-center">
                         <span className="inline-flex justify-center"><CheckIcon ok={row.us} /></span>
                       </td>
@@ -410,13 +420,13 @@ export default function Home() {
         {/* ── SECTION 6: SOCIAL PROOF ── */}
         <section className="mx-auto w-full max-w-6xl px-6 py-16 md:px-10 md:py-24">
           <div className="text-center">
-            <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">
+            <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#c45c0f]">
               Early access
             </p>
-            <h2 className="text-3xl font-semibold tracking-tight text-[#3c3732] md:text-4xl">
+            <h2 className="text-3xl font-semibold tracking-tight text-[#1a1510] md:text-4xl">
               Designed with property managers, for property managers.
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-[#5d554f]">
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-[#3d342c]">
               We&apos;re working closely with a small group of Airbnb hosts and short-term rental operators to make the experience as smooth as possible before the wider launch.
             </p>
           </div>
@@ -440,15 +450,15 @@ export default function Home() {
             ].map((t) => (
               <article
                 key={t.name}
-                className="flex flex-col justify-between rounded-2xl border border-[#e3dcd1] bg-[#fbf9f5] p-7"
+                className="flex flex-col justify-between rounded-2xl border border-[#e8d9c5] bg-white p-7 shadow-sm"
               >
                 <div>
-                  <span className="text-2xl text-[#c5bdb4]">&ldquo;</span>
-                  <p className="mt-2 text-sm italic leading-7 text-[#5d554f]">{t.quote}</p>
+                  <span className="text-2xl text-[#e8a870]">&ldquo;</span>
+                  <p className="mt-2 text-sm italic leading-7 text-[#3d342c]">{t.quote}</p>
                 </div>
-                <div className="mt-5 border-t border-[#e8e2d8] pt-4">
-                  <p className="text-sm font-semibold text-[#3f3934]">{t.name}</p>
-                  <p className="text-xs text-[#7d7570]">{t.props}</p>
+                <div className="mt-5 border-t border-[#e8d9c5] pt-4">
+                  <p className="text-sm font-semibold text-[#1a1510]">{t.name}</p>
+                  <p className="text-xs text-[#6b5f54]">{t.props}</p>
                 </div>
               </article>
             ))}
@@ -456,34 +466,34 @@ export default function Home() {
         </section>
 
         {/* ── SECTION 7: FINAL CTA ── */}
-        <section className="border-y border-[#e5dfd4]">
+        <section className="border-y border-[#e8d9c5] bg-[#1a1510]">
           <div className="mx-auto w-full max-w-3xl px-6 py-20 text-center md:px-10">
-            <p className="mb-4 inline-block rounded-full border border-[#e4ddd3] bg-[#f5f1ea] px-4 py-1 text-xs font-medium tracking-[0.15em] uppercase text-[#5f5751]">
+            <p className="mb-4 inline-block rounded-full border border-[#c45c0f]/40 bg-[#c45c0f]/10 px-4 py-1 text-xs font-medium tracking-[0.15em] uppercase text-[#e8a870]">
               Free during early access
             </p>
-            <h2 className="text-3xl font-semibold tracking-tight text-[#3c3732] md:text-5xl">
+            <h2 className="text-3xl font-semibold tracking-tight text-white md:text-5xl">
               Your next guest deserves a clean property.
             </h2>
-            <p className="mx-auto mt-5 max-w-lg text-base leading-relaxed text-[#5d554f]">
+            <p className="mx-auto mt-5 max-w-lg text-base leading-relaxed text-[#c5b8aa]">
               Set it up in 10 minutes. No credit card. Cancel anytime. Join the early access group and never chase a cleaner again.
             </p>
             <div className="mt-9 flex flex-wrap justify-center gap-3">
               <a
                 href="/signup"
-                className="rounded-full bg-[#4b443e] px-8 py-4 text-sm font-medium text-[#f8f6f1] transition hover:bg-[#3f3934]"
+                className="rounded-full bg-[#c45c0f] px-8 py-4 text-sm font-medium text-white transition hover:bg-[#a34c0c]"
               >
                 Create free account →
               </a>
               <a
                 href="/login"
-                className="rounded-full border border-[#d6cfc4] bg-[#f9f6f0] px-8 py-4 text-sm font-medium text-[#4f4842] transition hover:bg-[#f1ece4]"
+                className="rounded-full border border-white/20 bg-white/10 px-8 py-4 text-sm font-medium text-white transition hover:bg-white/20"
               >
                 Sign in
               </a>
             </div>
             <div className="mt-6 flex flex-wrap justify-center gap-6">
               {["✓ Airbnb, Booking.com, Vrbo", "✓ Telegram dispatch", "✓ Photo verification", "✓ 10-min setup"].map((f) => (
-                <span key={f} className="text-xs text-[#7d7570]">{f}</span>
+                <span key={f} className="text-xs text-[#9c8a7c]">{f}</span>
               ))}
             </div>
           </div>
@@ -492,10 +502,10 @@ export default function Home() {
         {/* ── SECTION 8: FAQ ── */}
         <section id="faq" className="mx-auto w-full max-w-3xl px-6 py-16 md:px-10 md:py-24">
           <div className="text-center">
-            <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">
+            <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#c45c0f]">
               FAQ
             </p>
-            <h2 className="text-3xl font-semibold tracking-tight text-[#3c3732]">
+            <h2 className="text-3xl font-semibold tracking-tight text-[#1a1510]">
               Questions? We&apos;ve got answers.
             </h2>
           </div>
@@ -503,15 +513,15 @@ export default function Home() {
             {faqs.map((item) => (
               <details
                 key={item.q}
-                className="group rounded-2xl border border-[#e3dcd1] bg-[#fbf9f5] px-6 py-1 open:py-3"
+                className="group rounded-2xl border border-[#e8d9c5] bg-white px-6 py-1 open:py-3 shadow-sm"
               >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-3 text-sm font-medium text-[#3c3732] marker:hidden">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-3 text-sm font-medium text-[#1a1510] marker:hidden">
                   {item.q}
-                  <span className="shrink-0 text-[#9a9089] transition-transform group-open:rotate-45">
+                  <span className="shrink-0 text-[#c45c0f] transition-transform group-open:rotate-45">
                     +
                   </span>
                 </summary>
-                <p className="mt-1 pb-3 text-sm leading-7 text-[#5d554f]">{item.a}</p>
+                <p className="mt-1 pb-3 text-sm leading-7 text-[#3d342c]">{item.a}</p>
               </details>
             ))}
           </div>
@@ -520,15 +530,15 @@ export default function Home() {
       </main>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-[#e5dfd4] bg-[#fdfcf9]">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-xs text-[#9a9089] md:flex-row md:px-10">
-          <span className="font-semibold tracking-[0.18em] uppercase text-[#6a625c]">
+      <footer className="border-t border-[#e8d9c5] bg-[#faf5ec]">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-xs text-[#9c8a7c] md:flex-row md:px-10">
+          <span className="font-semibold tracking-[0.18em] uppercase text-[#1a1510]">
             Cleaner Dispatch
           </span>
           <div className="flex gap-6">
-            <a href="/login" className="hover:text-[#4a443e] transition">Sign in</a>
-            <a href="/signup" className="hover:text-[#4a443e] transition">Get started</a>
-            <a href="#faq" className="hover:text-[#4a443e] transition">FAQ</a>
+            <a href="/login" className="hover:text-[#1a1510] transition">Sign in</a>
+            <a href="/signup" className="hover:text-[#1a1510] transition">Get started</a>
+            <a href="#faq" className="hover:text-[#1a1510] transition">FAQ</a>
           </div>
           <span>© {new Date().getFullYear()} Cleaner Dispatch</span>
         </div>
