@@ -1,64 +1,54 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CalendarBookingEntry } from "@/app/api/calendar/bookings/route";
+import type { CalendarBookingEntry, DirectJobEntry } from "@/app/api/calendar/bookings/route";
 
 // ─── palette for up to 8 properties ────────────────────────────────────────
 const PALETTE = [
-  { bg: "#fff3e3", border: "#c45c0f", text: "#c45c0f" },
-  { bg: "#dbeafe", border: "#1d6fa4", text: "#1d6fa4" },
-  { bg: "#dcfce7", border: "#15803d", text: "#15803d" },
-  { bg: "#f3e8ff", border: "#7c3aed", text: "#7c3aed" },
-  { bg: "#fee2e2", border: "#b91c1c", text: "#b91c1c" },
-  { bg: "#ccfbf1", border: "#0f766e", text: "#0f766e" },
-  { bg: "#fef9c3", border: "#a16207", text: "#a16207" },
-  { bg: "#fce7f3", border: "#be185d", text: "#be185d" },
+  { bg: "#fff3e3", border: "#c45c0f", text: "#7a3800" },
+  { bg: "#dbeafe", border: "#1d6fa4", text: "#0f4d7a" },
+  { bg: "#dcfce7", border: "#15803d", text: "#0d5c2c" },
+  { bg: "#f3e8ff", border: "#7c3aed", text: "#5b21b6" },
+  { bg: "#fee2e2", border: "#b91c1c", text: "#7f1d1d" },
+  { bg: "#ccfbf1", border: "#0f766e", text: "#0a4f4a" },
+  { bg: "#fef9c3", border: "#a16207", text: "#713f12" },
+  { bg: "#fce7f3", border: "#be185d", text: "#831843" },
 ];
 
-function getPalette(idx: number) {
-  return PALETTE[idx % PALETTE.length];
-}
+function getPalette(idx: number) { return PALETTE[idx % PALETTE.length]; }
 
 // ─── date helpers ────────────────────────────────────────────────────────────
 function ymd(d: Date) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
-
 function toUTCMidnight(isoStr: string) {
   return new Date(`${isoStr.slice(0, 10)}T00:00:00Z`);
 }
 
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
 ];
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
-// Build list of all days (as UTC midnight Date objects) for a month grid (Mon-first, padded)
 function buildMonthGrid(year: number, month: number): (Date | null)[] {
-  const firstDay = new Date(Date.UTC(year, month, 1));
-  // getUTCDay: 0=Sun…6=Sat → convert to Mon-first index (0=Mon)
-  const startDow = (firstDay.getUTCDay() + 6) % 7;
-  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-
+  const firstDay     = new Date(Date.UTC(year, month, 1));
+  const startDow     = (firstDay.getUTCDay() + 6) % 7;
+  const daysInMonth  = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const cells: (Date | null)[] = [];
   for (let i = 0; i < startDow; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) {
-    cells.push(new Date(Date.UTC(year, month, d)));
-  }
-  // Pad to complete last row
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(Date.UTC(year, month, d)));
   while (cells.length % 7 !== 0) cells.push(null);
   return cells;
 }
 
-// ─── booking indicator for a single day cell ────────────────────────────────
 interface BookingChip {
   id: string;
   job_id: string | null;
   property_name: string;
   isCheckin: boolean;
   isCheckout: boolean;
-  palette: { bg: string; border: string; text: string };
+  palette: typeof PALETTE[number];
 }
 
 function getChipsForDay(
@@ -66,23 +56,50 @@ function getChipsForDay(
   bookings: CalendarBookingEntry[],
   colorMap: Map<string, number>
 ): BookingChip[] {
-  const chips: BookingChip[] = [];
-  for (const b of bookings) {
-    const checkin  = toUTCMidnight(b.checkin).getTime();
-    const checkout = toUTCMidnight(b.checkout).getTime();
-    // Active on this day: checkin <= date < checkout
-    if (checkin > dateMs || dateMs >= checkout) continue;
-    chips.push({
-      id:            b.id,
-      job_id:        b.job_id,
-      property_name: b.property_name,
-      isCheckin:     checkin === dateMs,
-      isCheckout:    checkout === dateMs + 86400_000,
-      palette:       getPalette(colorMap.get(b.property_id) ?? 0),
+  return bookings
+    .filter((b) => {
+      const ci = toUTCMidnight(b.checkin).getTime();
+      const co = toUTCMidnight(b.checkout).getTime();
+      return ci <= dateMs && dateMs < co;
+    })
+    .map((b) => {
+      const ci = toUTCMidnight(b.checkin).getTime();
+      const co = toUTCMidnight(b.checkout).getTime();
+      return {
+        id:            b.id,
+        job_id:        b.job_id,
+        property_name: b.property_name,
+        isCheckin:     ci === dateMs,
+        isCheckout:    co === dateMs + 86400_000,
+        palette:       getPalette(colorMap.get(b.property_id) ?? 0),
+      };
     });
-  }
-  return chips;
 }
+
+function getDirectJobsForDay(
+  dayStr: string,
+  directJobs: DirectJobEntry[],
+  colorMap: Map<string, number>
+) {
+  return directJobs.filter((j) => j.window_start.slice(0, 10) === dayStr);
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  new:                 "Not dispatched",
+  offered:             "Offer sent",
+  accepted:            "Accepted",
+  in_progress:         "In progress",
+  done_awaiting_review:"Done — review",
+  completed:           "Completed",
+};
+const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
+  new:                  { bg: "#f5f0e8", text: "#6a625c" },
+  offered:              { bg: "#fef3e3", text: "#7a5c1e" },
+  accepted:             { bg: "#e8f5e8", text: "#1a5c1a" },
+  in_progress:          { bg: "#d0ead0", text: "#145c14" },
+  done_awaiting_review: { bg: "#f0ebff", text: "#5b21b6" },
+  completed:            { bg: "#e8f0fb", text: "#1a3a7a" },
+};
 
 // ─── main component ──────────────────────────────────────────────────────────
 export default function CalendarPage() {
@@ -90,41 +107,45 @@ export default function CalendarPage() {
   const [year,  setYear]  = useState(today.getUTCFullYear());
   const [month, setMonth] = useState(today.getUTCMonth());
 
-  const [bookings, setBookings]       = useState<CalendarBookingEntry[]>([]);
-  const [loading,  setLoading]        = useState(true);
-  const [error,    setError]          = useState<string | null>(null);
-  const [filterOpen, setFilterOpen]   = useState(false);
+  const [bookings,    setBookings]    = useState<CalendarBookingEntry[]>([]);
+  const [directJobs,  setDirectJobs]  = useState<DirectJobEntry[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState<string | null>(null);
+  const [filterOpen,  setFilterOpen]  = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
-  // Collect unique properties from bookings (stable across re-renders)
   const properties = useMemo(() => {
     const map = new Map<string, string>();
-    for (const b of bookings) map.set(b.property_id, b.property_name);
+    for (const b of bookings)    map.set(b.property_id, b.property_name);
+    for (const j of directJobs)  map.set(j.property_id, j.property_name);
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [bookings]);
+  }, [bookings, directJobs]);
 
   const [hiddenPropIds, setHiddenPropIds] = useState<Set<string>>(new Set());
 
-  // Stable color index per property_id
   const colorMap = useMemo<Map<string, number>>(() => {
     const m = new Map<string, number>();
     properties.forEach((p, i) => m.set(p.id, i));
     return m;
   }, [properties]);
 
-  // Fetch bookings for ±1 month around the viewed month to cover spans
   const fetchBookings = useCallback(async (y: number, mo: number) => {
     setLoading(true);
     setError(null);
     try {
       const from = new Date(Date.UTC(y, mo, 1));
       const to   = new Date(Date.UTC(y, mo + 1, 0));
-      const res  = await fetch(
-        `/api/calendar/bookings?from=${ymd(from)}&to=${ymd(to)}`
-      );
+      const res  = await fetch(`/api/calendar/bookings?from=${ymd(from)}&to=${ymd(to)}`);
       if (!res.ok) throw new Error(await res.text());
-      const data: CalendarBookingEntry[] = await res.json();
-      setBookings(data);
+      const data = await res.json();
+      // Handle both old (array) and new ({bookings, direct_jobs}) shape
+      if (Array.isArray(data)) {
+        setBookings(data);
+        setDirectJobs([]);
+      } else {
+        setBookings(data.bookings ?? []);
+        setDirectJobs(data.direct_jobs ?? []);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load bookings");
     } finally {
@@ -134,12 +155,10 @@ export default function CalendarPage() {
 
   useEffect(() => { fetchBookings(year, month); }, [fetchBookings, year, month]);
 
-  // Close filter dropdown on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node))
         setFilterOpen(false);
-      }
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -157,15 +176,6 @@ export default function CalendarPage() {
     setYear(today.getUTCFullYear());
     setMonth(today.getUTCMonth());
   }
-
-  const grid  = useMemo(() => buildMonthGrid(year, month), [year, month]);
-  const todayStr = ymd(today);
-
-  const visibleBookings = useMemo(
-    () => bookings.filter(b => !hiddenPropIds.has(b.property_id)),
-    [bookings, hiddenPropIds]
-  );
-
   function toggleProp(id: string) {
     setHiddenPropIds(prev => {
       const next = new Set(prev);
@@ -174,228 +184,259 @@ export default function CalendarPage() {
     });
   }
 
-  return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* ── Header row ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-[#1a0a00]">Bookings Calendar</h1>
+  const grid     = useMemo(() => buildMonthGrid(year, month), [year, month]);
+  const todayStr = ymd(today);
 
-        {/* Property filter */}
-        <div className="relative" ref={filterRef}>
-          <button
-            onClick={() => setFilterOpen(o => !o)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#e8d5c0] bg-white text-sm text-[#1a0a00] hover:border-[#c45c0f] transition-colors"
-          >
-            <span>
+  const visibleBookings  = useMemo(() => bookings.filter(b  => !hiddenPropIds.has(b.property_id)),  [bookings,    hiddenPropIds]);
+  const visibleDirect    = useMemo(() => directJobs.filter(j => !hiddenPropIds.has(j.property_id)), [directJobs,  hiddenPropIds]);
+
+  const totalItems = bookings.length + directJobs.length;
+
+  return (
+    <div className="min-h-screen bg-[#f7f3ec]">
+      <div className="max-w-5xl mx-auto px-4 py-8">
+
+        {/* ── Header ── */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-[#1a1510]">Bookings Calendar</h1>
+            <p className="mt-0.5 text-sm text-[#6a625c]">
+              {totalItems > 0
+                ? `${bookings.length} synced booking${bookings.length !== 1 ? "s" : ""}, ${directJobs.length} cleaning job${directJobs.length !== 1 ? "s" : ""}`
+                : "No bookings or jobs yet — add a calendar feed to properties"}
+            </p>
+          </div>
+
+          {/* Property filter */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setFilterOpen(o => !o)}
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#e3dcd1] bg-white text-sm font-medium text-[#3c3732] hover:bg-[#f5f0e8] transition-colors shadow-sm"
+            >
               {hiddenPropIds.size === 0
                 ? "All properties"
                 : `${properties.length - hiddenPropIds.size} / ${properties.length} shown`}
-            </span>
-            <svg className="w-4 h-4 text-[#7a5c44]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              <svg className="w-4 h-4 text-[#9a9089]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {filterOpen && properties.length > 0 && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-[#e3dcd1] shadow-lg z-20 p-3">
+                <div className="flex justify-between mb-2 pb-2 border-b border-[#f0ebe3]">
+                  <button onClick={() => setHiddenPropIds(new Set())} className="text-xs text-[#c45c0f] hover:underline">Show all</button>
+                  <button onClick={() => setHiddenPropIds(new Set(properties.map(p => p.id)))} className="text-xs text-[#9a9089] hover:underline">Hide all</button>
+                </div>
+                {properties.map((p) => {
+                  const pal     = getPalette(colorMap.get(p.id) ?? 0);
+                  const visible = !hiddenPropIds.has(p.id);
+                  return (
+                    <label key={p.id} className="flex items-center gap-2 py-1.5 cursor-pointer">
+                      <input type="checkbox" checked={visible} onChange={() => toggleProp(p.id)} className="w-4 h-4 rounded accent-[#c45c0f]" />
+                      <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: pal.border }} />
+                      <span className="text-sm text-[#3c3732] truncate">{p.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Month nav ── */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={prevMonth}
+            className="w-9 h-9 flex items-center justify-center rounded-full border border-[#e3dcd1] bg-white text-[#3c3732] hover:bg-[#f5f0e8] transition-colors shadow-sm"
+            aria-label="Previous month"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
 
-          {filterOpen && properties.length > 0 && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl border border-[#e8d5c0] shadow-lg z-20 p-3">
-              <div className="flex justify-between mb-2">
-                <button
-                  onClick={() => setHiddenPropIds(new Set())}
-                  className="text-xs text-[#c45c0f] hover:underline"
-                >
-                  Show all
-                </button>
-                <button
-                  onClick={() => setHiddenPropIds(new Set(properties.map(p => p.id)))}
-                  className="text-xs text-[#7a5c44] hover:underline"
-                >
-                  Hide all
-                </button>
-              </div>
-              {properties.map((p) => {
-                const pal     = getPalette(colorMap.get(p.id) ?? 0);
-                const visible = !hiddenPropIds.has(p.id);
-                return (
-                  <label key={p.id} className="flex items-center gap-2 py-1.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={visible}
-                      onChange={() => toggleProp(p.id)}
-                      className="w-4 h-4 rounded accent-[#c45c0f]"
-                    />
-                    <span
-                      className="w-3 h-3 rounded-sm flex-shrink-0"
-                      style={{ background: pal.border }}
-                    />
-                    <span className="text-sm text-[#1a0a00] group-hover:text-[#c45c0f] truncate">
-                      {p.name}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
+          <div className="flex items-center gap-3">
+            <span className="text-lg font-semibold text-[#1a1510]">{MONTH_NAMES[month]} {year}</span>
+            <button
+              onClick={goToday}
+              className="px-3 py-1 text-xs rounded-full border border-[#e3dcd1] bg-white text-[#6a625c] hover:border-[#c45c0f] hover:text-[#c45c0f] transition-colors shadow-sm"
+            >
+              Today
+            </button>
+          </div>
 
-      {/* ── Month nav ── */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={prevMonth}
-          className="p-2 rounded-lg hover:bg-[#f5ede4] transition-colors text-[#1a0a00]"
-          aria-label="Previous month"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
-        <div className="flex items-center gap-3">
-          <span className="text-lg font-semibold text-[#1a0a00]">
-            {MONTH_NAMES[month]} {year}
-          </span>
           <button
-            onClick={goToday}
-            className="px-3 py-1 text-xs rounded-full border border-[#e8d5c0] text-[#7a5c44] hover:border-[#c45c0f] hover:text-[#c45c0f] transition-colors"
+            onClick={nextMonth}
+            className="w-9 h-9 flex items-center justify-center rounded-full border border-[#e3dcd1] bg-white text-[#3c3732] hover:bg-[#f5f0e8] transition-colors shadow-sm"
+            aria-label="Next month"
           >
-            Today
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         </div>
 
-        <button
-          onClick={nextMonth}
-          className="p-2 rounded-lg hover:bg-[#f5ede4] transition-colors text-[#1a0a00]"
-          aria-label="Next month"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-
-      {/* ── Legend ── */}
-      {properties.length > 0 && (
-        <div className="flex flex-wrap gap-3 mb-4">
-          {properties.map((p) => {
-            const pal     = getPalette(colorMap.get(p.id) ?? 0);
-            const visible = !hiddenPropIds.has(p.id);
-            return (
-              <button
-                key={p.id}
-                onClick={() => toggleProp(p.id)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-all"
-                style={{
-                  background:   visible ? pal.bg    : "#f5f5f5",
-                  borderColor:  visible ? pal.border : "#d1d5db",
-                  color:        visible ? pal.text   : "#9ca3af",
-                }}
-              >
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ background: visible ? pal.border : "#9ca3af" }}
-                />
-                {p.name}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Grid ── */}
-      {loading ? (
-        <div className="flex items-center justify-center h-64 text-[#7a5c44]">Loading…</div>
-      ) : error ? (
-        <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
-      ) : (
-        <div className="rounded-2xl border border-[#e8d5c0] overflow-hidden bg-white">
-          {/* Day-of-week header */}
-          <div className="grid grid-cols-7 bg-[#fdf6ee] border-b border-[#e8d5c0]">
-            {DAY_LABELS.map((d) => (
-              <div key={d} className="py-2 text-center text-xs font-semibold text-[#7a5c44] uppercase tracking-wide">
-                {d}
-              </div>
-            ))}
-          </div>
-
-          {/* Day cells */}
-          <div className="grid grid-cols-7 divide-x divide-y divide-[#f0e4d4]">
-            {grid.map((day, i) => {
-              if (!day) {
-                return <div key={i} className="bg-[#fdf6ee] min-h-[90px]" />;
-              }
-              const dayMs   = day.getTime();
-              const dayStr  = ymd(day);
-              const isToday = dayStr === todayStr;
-              const chips   = getChipsForDay(dayMs, visibleBookings, colorMap);
-
+        {/* ── Property legend ── */}
+        {properties.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {properties.map((p) => {
+              const pal     = getPalette(colorMap.get(p.id) ?? 0);
+              const visible = !hiddenPropIds.has(p.id);
               return (
-                <div
-                  key={dayStr}
-                  className={`min-h-[90px] p-1.5 flex flex-col gap-1 ${
-                    isToday ? "bg-[#fff8f2]" : ""
-                  }`}
+                <button
+                  key={p.id}
+                  onClick={() => toggleProp(p.id)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-all"
+                  style={{
+                    background:  visible ? pal.bg     : "#f0ebe3",
+                    borderColor: visible ? pal.border  : "#d6cfc6",
+                    color:       visible ? pal.text    : "#9a9089",
+                  }}
                 >
-                  {/* Date number */}
-                  <span
-                    className={`text-xs font-semibold self-start leading-none mb-0.5 ${
-                      isToday
-                        ? "w-5 h-5 flex items-center justify-center rounded-full bg-[#c45c0f] text-white"
-                        : "text-[#7a5c44]"
-                    }`}
-                  >
-                    {day.getUTCDate()}
-                  </span>
-
-                  {/* Booking chips */}
-                  {chips.map((chip) => (
-                    <div key={chip.id + dayStr} className="space-y-0.5">
-                      <div
-                        className="rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate"
-                        style={{
-                          background: chip.palette.bg,
-                          color:      chip.palette.text,
-                          borderLeft: `3px solid ${chip.palette.border}`,
-                        }}
-                        title={`${chip.property_name}${chip.isCheckin ? " — check-in" : chip.isCheckout ? " — check-out" : ""}`}
-                      >
-                        {chip.isCheckin  && <span className="mr-0.5">→</span>}
-                        {chip.isCheckout && <span className="mr-0.5">←</span>}
-                        <span className="truncate">{chip.property_name}</span>
-                      </div>
-                      {/* Cleaning job indicator on checkout day */}
-                      {chip.isCheckout && (
-                        chip.job_id ? (
-                          <a
-                            href={`/dashboard/jobs/${chip.job_id}`}
-                            className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 truncate"
-                            title="Cleaning job scheduled — click to view"
-                          >
-                            🧹 Cleaning scheduled
-                          </a>
-                        ) : (
-                          <div
-                            className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-amber-700 bg-amber-50 truncate"
-                            title="No cleaning job yet for this checkout"
-                          >
-                            ⚠ No cleaning job
-                          </div>
-                        )
-                      )}
-                    </div>
-                  ))}
-                </div>
+                  <span className="w-2 h-2 rounded-full" style={{ background: visible ? pal.border : "#b0a89f" }} />
+                  {p.name}
+                </button>
               );
             })}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ── Tip ── */}
-      {!loading && !error && (
-        <p className="mt-4 text-xs text-[#a08060] text-center">
-          → check-in &nbsp;|&nbsp; ← check-out &nbsp;|&nbsp; Click legend to toggle properties &nbsp;|&nbsp; Updates hourly from your calendar feeds
-        </p>
-      )}
+        {/* ── Calendar grid ── */}
+        {loading ? (
+          <div className="flex items-center justify-center h-64 rounded-2xl border border-[#e3dcd1] bg-white">
+            <div className="flex items-center gap-2 text-[#9a9089] text-sm">
+              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round"/>
+              </svg>
+              Loading…
+            </div>
+          </div>
+        ) : error ? (
+          <div className="p-5 rounded-2xl border border-red-100 bg-red-50 text-sm text-red-700">{error}</div>
+        ) : (
+          <div className="rounded-2xl border border-[#e3dcd1] overflow-hidden shadow-sm">
+            {/* Day-of-week header */}
+            <div className="grid grid-cols-7 bg-[#f5f0e8] border-b border-[#e3dcd1]">
+              {DAY_LABELS.map((d) => (
+                <div key={d} className="py-2.5 text-center text-xs font-semibold text-[#6a625c] uppercase tracking-wider">
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Day cells */}
+            <div className="grid grid-cols-7 bg-white divide-x divide-y divide-[#ede8e1]">
+              {grid.map((day, i) => {
+                if (!day) {
+                  return <div key={i} className="bg-[#faf7f4] min-h-[100px]" />;
+                }
+                const dayMs   = day.getTime();
+                const dayStr  = ymd(day);
+                const isToday = dayStr === todayStr;
+                const chips   = getChipsForDay(dayMs, visibleBookings, colorMap);
+                const djobs   = getDirectJobsForDay(dayStr, visibleDirect, colorMap);
+
+                return (
+                  <div
+                    key={dayStr}
+                    className={`min-h-[100px] p-1.5 flex flex-col gap-1 ${
+                      isToday ? "bg-[#fff8f2]" : "bg-white"
+                    }`}
+                  >
+                    {/* Date number */}
+                    <span
+                      className={`text-xs font-semibold self-start leading-none mb-0.5 ${
+                        isToday
+                          ? "w-6 h-6 flex items-center justify-center rounded-full bg-[#c45c0f] text-white text-[11px]"
+                          : "text-[#6a625c]"
+                      }`}
+                    >
+                      {day.getUTCDate()}
+                    </span>
+
+                    {/* Booking chips (from iCal sync) */}
+                    {chips.map((chip) => (
+                      <div key={chip.id + dayStr} className="space-y-0.5">
+                        <div
+                          className="rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate"
+                          style={{
+                            background:  chip.palette.bg,
+                            color:       chip.palette.text,
+                            borderLeft:  `3px solid ${chip.palette.border}`,
+                          }}
+                          title={`${chip.property_name}${chip.isCheckin ? " — check-in" : chip.isCheckout ? " — check-out" : ""}`}
+                        >
+                          {chip.isCheckin  && <span className="mr-0.5 opacity-70">→</span>}
+                          {chip.isCheckout && <span className="mr-0.5 opacity-70">←</span>}
+                          <span>{chip.property_name}</span>
+                        </div>
+
+                        {/* Cleaning job indicator on checkout day */}
+                        {chip.isCheckout && (
+                          chip.job_id ? (
+                            <a
+                              href={`/dashboard/jobs/${chip.job_id}`}
+                              className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 truncate transition-colors"
+                              title="Cleaning job — click to view"
+                            >
+                              🧹 Cleaning scheduled
+                            </a>
+                          ) : (
+                            <div
+                              className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-amber-700 bg-amber-50 truncate"
+                              title="No cleaning job yet for this checkout"
+                            >
+                              ⚠ No cleaning job
+                            </div>
+                          )
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Direct / manual cleaning jobs */}
+                    {djobs.map((job) => {
+                      const pal = getPalette(colorMap.get(job.property_id) ?? 0);
+                      const sc  = STATUS_COLOR[job.status] ?? { bg: "#f5f0e8", text: "#6a625c" };
+                      const lbl = STATUS_LABEL[job.status] ?? job.status;
+                      const time = new Date(job.window_start).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+                      return (
+                        <a
+                          key={job.id}
+                          href={`/dashboard/jobs/${job.id}`}
+                          className="rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate block hover:opacity-80 transition-opacity"
+                          style={{ background: pal.bg, color: pal.text, borderLeft: `3px solid ${pal.border}` }}
+                          title={`${job.property_name} — Cleaning ${time} — ${lbl}`}
+                        >
+                          🧹 {job.property_name}
+                          <span
+                            className="ml-1 rounded-sm px-1 text-[9px]"
+                            style={{ background: sc.bg, color: sc.text }}
+                          >
+                            {lbl}
+                          </span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Legend / tip ── */}
+        {!loading && !error && (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-[#9a9089]">
+            <span>→ check-in</span>
+            <span className="hidden sm:inline text-[#d6cfc6]">|</span>
+            <span>← check-out</span>
+            <span className="hidden sm:inline text-[#d6cfc6]">|</span>
+            <span>🧹 cleaning job (tap to view)</span>
+            <span className="hidden sm:inline text-[#d6cfc6]">|</span>
+            <span>Click legend to toggle properties</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

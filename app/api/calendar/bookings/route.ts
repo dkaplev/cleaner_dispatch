@@ -14,10 +14,21 @@ export type CalendarBookingEntry = {
   job_id: string | null;  // set if a cleaning job was created for this booking
 };
 
+/** A Job that is NOT linked to a CalendarBooking (manually created, or sync pending). */
+export type DirectJobEntry = {
+  id: string;
+  property_id: string;
+  property_name: string;
+  window_start: string;  // ISO datetime
+  window_end: string;    // ISO datetime
+  status: string;
+};
+
 /**
  * GET /api/calendar/bookings?from=YYYY-MM-DD&to=YYYY-MM-DD
- * Returns all active CalendarBookings for the authenticated landlord
- * whose stay overlaps the requested date range.
+ * Returns:
+ *   bookings — CalendarBookings overlapping the range (from iCal sync)
+ *   direct_jobs — Jobs NOT linked to any CalendarBooking, within the range
  */
 export async function GET(req: Request) {
   const session = await auth();
@@ -38,23 +49,19 @@ export async function GET(req: Request) {
 
   const prisma = getPrisma();
   try {
+    // ── 1. Calendar-synced bookings ────────────────────────────────────────────
     const bookings = await prisma.calendarBooking.findMany({
       where: {
-        status: "active",
+        status:   "active",
         checkin:  { lte: to },
         checkout: { gte: from },
         feed: { property: { landlord_id: session.user.id } },
       },
       select: {
-        id: true,
-        uid: true,
-        checkin: true,
-        checkout: true,
-        job_id: true,
+        id: true, uid: true, checkin: true, checkout: true, job_id: true,
         feed: {
           select: {
-            source: true,
-            label: true,
+            source: true, label: true,
             property: { select: { id: true, name: true } },
           },
         },
@@ -62,7 +69,11 @@ export async function GET(req: Request) {
       orderBy: { checkin: "asc" },
     });
 
-    const result: CalendarBookingEntry[] = bookings.map((b) => ({
+    const calBookingJobIds = new Set(
+      bookings.map((b) => b.job_id).filter((id): id is string => !!id)
+    );
+
+    const bookingResult: CalendarBookingEntry[] = bookings.map((b) => ({
       id:            b.id,
       uid:           b.uid,
       checkin:       b.checkin.toISOString(),
@@ -74,7 +85,35 @@ export async function GET(req: Request) {
       job_id:        b.job_id,
     }));
 
-    return NextResponse.json(result);
+    // ── 2. Direct (manually-created or sync-pending) jobs ─────────────────────
+    const directJobs = await prisma.job.findMany({
+      where: {
+        landlord_id:  session.user.id,
+        status:       { notIn: ["cancelled"] },
+        window_start: { lte: to },
+        window_end:   { gte: from },
+        // Exclude jobs already represented by a CalendarBooking
+        ...(calBookingJobIds.size > 0
+          ? { id: { notIn: Array.from(calBookingJobIds) } }
+          : {}),
+      },
+      select: {
+        id: true, status: true, window_start: true, window_end: true,
+        property: { select: { id: true, name: true } },
+      },
+      orderBy: { window_start: "asc" },
+    });
+
+    const directResult: DirectJobEntry[] = directJobs.map((j) => ({
+      id:            j.id,
+      property_id:   j.property.id,
+      property_name: j.property.name,
+      window_start:  j.window_start.toISOString(),
+      window_end:    j.window_end.toISOString(),
+      status:        j.status,
+    }));
+
+    return NextResponse.json({ bookings: bookingResult, direct_jobs: directResult });
   } finally {
     await prisma.$disconnect();
   }
