@@ -57,7 +57,8 @@ export default async function OnboardingPage() {
           initialStep = 4; // has assignment → move to Telegram step
 
           if (telegramLinked) {
-            initialStep = 5; // has Telegram → move to email forwarding step (optional)
+            // All required steps complete — redirect to dashboard
+            redirect("/dashboard");
           }
         }
       }

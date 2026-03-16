@@ -74,8 +74,40 @@ model Property {
   cleanings                 Cleaning[]
   jobs                      Job[]
   property_cleaners         PropertyCleaner[]
+  calendar_feeds            CalendarFeed[]
 
   @@map("properties")
+}
+
+model CalendarFeed {
+  id             String            @id @default(cuid())
+  property_id    String
+  property       Property          @relation(fields: [property_id], references: [id], onDelete: Cascade)
+  url            String            // iCal feed URL — treated as secret, not exposed in list responses
+  source         String            @default("other") // airbnb | booking_com | vrbo | expedia | tripadvisor | hometogo | holidu | direct | other
+  label          String?           // optional human label, e.g. "My Airbnb"
+  last_synced_at DateTime?
+  sync_error     String?           // last error message, cleared on success
+  created_at     DateTime          @default(now())
+  bookings       CalendarBooking[]
+
+  @@map("calendar_feeds")
+}
+
+model CalendarBooking {
+  id         String       @id @default(cuid())
+  feed_id    String
+  feed       CalendarFeed @relation(fields: [feed_id], references: [id], onDelete: Cascade)
+  uid        String       // iCal UID — stable identifier for the booking
+  checkin    DateTime     // DTSTART (date-only, stored as UTC midnight)
+  checkout   DateTime     // DTEND  (exclusive in iCal = the checkout day)
+  job_id     String?      // linked Job if dispatch was triggered
+  status     String       @default("active") // active | cancelled
+  created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
+
+  @@unique([feed_id, uid])
+  @@map("calendar_bookings")
 }
 
 model Cleaner {

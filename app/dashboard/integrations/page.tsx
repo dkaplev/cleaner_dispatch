@@ -26,6 +26,12 @@ export default async function IntegrationsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
+  // ── Calendar sync is now the primary ingestion method.
+  // ── Email forwarding is preserved here for admin / internal use.
+  // ── Redirect regular users to properties page where calendar feeds are managed.
+  redirect("/dashboard/properties");
+
+  // eslint-disable-next-line no-unreachable
   const token = await getOrCreateToken(session.user.id);
   const centralEmail = process.env.INGEST_CENTRAL_EMAIL?.trim() ?? "";
   const forwardingAddress = centralEmail

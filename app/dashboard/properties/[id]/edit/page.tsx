@@ -5,6 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { DashboardHeader } from "../../../dashboard-header";
 import { PropertyForm } from "../../property-form";
 import { PropertyCleaners } from "../../property-cleaners";
+import { CalendarFeeds } from "../../calendar-feeds";
 
 export default async function EditPropertyPage({
   params,
@@ -61,6 +62,7 @@ export default async function EditPropertyPage({
           hideButtons
         />
         <PropertyCleaners propertyId={property.id} allCleaners={allCleaners} />
+        <CalendarFeeds propertyId={property.id} />
 
         {/* Save/Cancel anchored below the cleaners section */}
         <div className="mt-6 flex gap-3 border-t border-zinc-200 pt-6">

@@ -18,7 +18,7 @@ type Props = {
   telegramLinked: boolean;
 };
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4; // Step 5 (email forwarding) hidden — calendar sync is now primary
 
 // ── Design tokens (matching landing page) ────────────────────────────────────
 const btn =
@@ -469,10 +469,7 @@ const STEPS = [
     title: "Get Telegram notifications",
     subtitle: "Stay in the loop without opening the app.",
   },
-  {
-    title: "Set up email forwarding",
-    subtitle: "Optional — jobs can also be created manually.",
-  },
+  // Step 5 (email forwarding) removed — calendar sync is now primary ingestion
 ];
 
 export function OnboardingWizard(props: Props) {
@@ -582,13 +579,7 @@ export function OnboardingWizard(props: Props) {
                 onDone={next}
               />
             )}
-            {step === 5 && (
-              <Step5
-                ingestCentralEmail={props.ingestCentralEmail}
-                ingestToken={props.ingestToken}
-                onDone={() => (window.location.href = "/dashboard")}
-              />
-            )}
+            {/* Step 5 (email forwarding) removed — calendar feeds are set up per-property */}
           </div>
         </div>
 

@@ -167,7 +167,7 @@ export default async function DashboardPage() {
             { label: "Add a cleaner", done: hasCleaner, href: "/onboarding", cta: "Add cleaner" },
             { label: "Assign cleaner to property", done: hasPropertyCleaner, href: "/onboarding", cta: "Assign" },
             { label: "Link your Telegram for notifications", done: !!telegramChatId, href: "/onboarding", cta: "Link Telegram" },
-            { label: "Set up email forwarding (auto job creation)", done: false, href: "/dashboard/integrations", cta: "Set up", optional: true },
+            // Email forwarding hidden — calendar sync is now the primary ingestion method
           ]}
         />
 
@@ -238,11 +238,7 @@ export default async function DashboardPage() {
               href="/dashboard/cleaners"
               badge={cleanerCount}
             />
-            <NavCard
-              title="Email forwarding"
-              description="Set up Gmail filter + n8n workflow to auto-create jobs from booking emails."
-              href="/dashboard/integrations"
-            />
+            {/* Email forwarding card hidden — calendar sync is now primary ingestion */}
           </div>
         </section>
 
