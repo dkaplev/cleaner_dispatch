@@ -32,7 +32,7 @@ export default async function IntegrationsPage() {
   redirect("/dashboard/properties");
 
   // eslint-disable-next-line no-unreachable
-  const token = await getOrCreateToken(session.user.id);
+  const token = await getOrCreateToken(session!.user!.id!);
   const centralEmail = process.env.INGEST_CENTRAL_EMAIL?.trim() ?? "";
   const forwardingAddress = centralEmail
     ? centralEmail.replace("@", `+${token}@`)
