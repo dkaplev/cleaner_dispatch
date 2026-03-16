@@ -238,6 +238,11 @@ export default async function DashboardPage() {
               href="/dashboard/cleaners"
               badge={cleanerCount}
             />
+            <NavCard
+              title="Bookings Calendar"
+              description="View all upcoming bookings across your properties on a single month calendar."
+              href="/dashboard/calendar"
+            />
             {/* Email forwarding card hidden — calendar sync is now primary ingestion */}
           </div>
         </section>

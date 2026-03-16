@@ -198,6 +198,34 @@ export async function syncCalendarFeed(
       // Dispatch to cleaner
       await dispatchJob(prisma, job.id);
 
+      // ── Urgent alert: same-day or next-day check-in ──────────────────────
+      const todayStr     = toDateStr(new Date());
+      const tomorrowStr  = toDateStr(new Date(Date.now() + 86400_000));
+      const checkinStr   = toDateStr(event.checkin);
+      const isUrgent     = checkinStr === todayStr || checkinStr === tomorrowStr;
+
+      if (isUrgent) {
+        const chatId = property.landlord.telegram_chat_id;
+        if (chatId) {
+          const label = checkinStr === todayStr ? "TODAY" : "TOMORROW";
+          const fmt = (d: Date) =>
+            d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+          const baseUrl = process.env.NEXTAUTH_URL ?? "https://cleaner-dispatch.vercel.app";
+          const jobUrl  = `${baseUrl}/dashboard/cleanings/${job.id}`;
+          const text =
+            `🚨 <b>URGENT — guest checks in ${label}!</b>\n` +
+            `Property: <b>${property.name}</b>\n` +
+            `Check-in: ${fmt(event.checkin)}\n` +
+            `Check-out: ${fmt(event.checkout)}\n\n` +
+            `A cleaning job has been dispatched automatically. Please confirm your cleaner can make it in time.`;
+          try {
+            await sendTelegramMessageWithUrlButton(chatId, text, "📋 View job", jobUrl);
+          } catch {
+            await sendTelegramMessage(chatId, text);
+          }
+        }
+      }
+
       result.created++;
     } else if (known.status === "active") {
       // ── CHECK FOR DATE CHANGE ────────────────────────────────────────────
