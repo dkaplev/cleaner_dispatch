@@ -297,13 +297,10 @@ export default function Home() {
                 Three steps. Zero chasing.
               </h2>
             </div>
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {steps.map((s, i) => (
-                <div key={s.n} className="relative">
-                  {i < steps.length - 1 && (
-                    <div className="absolute top-7 left-full z-10 hidden h-px w-6 bg-[#e0cdb3] md:block" />
-                  )}
-                  <div className="rounded-2xl border border-[#e8d9c5] bg-white p-6 shadow-sm">
+            <div className="mt-12 grid gap-6 md:grid-cols-3 md:items-stretch">
+              {steps.map((s) => (
+                <div key={s.n} className="flex">
+                  <div className="flex flex-col rounded-2xl border border-[#e8d9c5] bg-white p-6 shadow-sm w-full">
                     <span className="text-2xl font-bold tracking-tight text-[#c45c0f]">{s.n}</span>
                     <h3 className="mt-3 text-base font-semibold text-[#1a1510]">{s.title}</h3>
                     <p className="mt-2 text-sm leading-7 text-[#3d342c]">{s.body}</p>
