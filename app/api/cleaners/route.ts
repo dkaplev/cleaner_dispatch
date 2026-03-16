@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getPrisma } from "@/lib/prisma";
+import { generateReferralCode } from "@/lib/cleaner-token";
 
 export async function GET() {
   const session = await auth();
@@ -41,6 +42,12 @@ export async function POST(request: Request) {
     const is_active = typeof body.is_active === "boolean" ? body.is_active : true;
 
     prisma = getPrisma();
+
+    // Generate a unique referral code; retry once on collision (extremely unlikely)
+    let referral_code = generateReferralCode(name);
+    const existing = await prisma.cleaner.findUnique({ where: { referral_code } });
+    if (existing) referral_code = generateReferralCode(name);
+
     const cleaner = await prisma.cleaner.create({
       data: {
         landlord_id: session.user.id,
@@ -48,6 +55,7 @@ export async function POST(request: Request) {
         telegram_chat_id,
         notes,
         is_active,
+        referral_code,
       },
     });
     return NextResponse.json(cleaner);

@@ -69,8 +69,9 @@ export default async function AdminOverviewPage() {
       jobsWeek,
       jobsMonth,
       feedbackCounts,
-      // Signup trend last 7 days (raw)
       recentUsers,
+      referredUsers,
+      topReferrers,
     ] = await Promise.all([
       prisma.user.count({ where: { role: "landlord" } }),
       prisma.user.count({ where: { role: "landlord", created_at: { gte: d7 } } }),
@@ -89,7 +90,29 @@ export default async function AdminOverviewPage() {
         select: { created_at: true },
         orderBy: { created_at: "asc" },
       }),
+      // Referral stats
+      prisma.user.count({ where: { referred_by_cleaner_id: { not: null } } }),
+      prisma.user.groupBy({
+        by: ["referred_by_cleaner_id"],
+        where: { referred_by_cleaner_id: { not: null } },
+        _count: { referred_by_cleaner_id: true },
+        orderBy: { _count: { referred_by_cleaner_id: "desc" } },
+        take: 5,
+      }),
     ]);
+
+    // Fetch cleaner names for top referrers
+    const referrerIds = topReferrers
+      .map((r) => r.referred_by_cleaner_id)
+      .filter((id): id is string => !!id);
+    const referrerCleaners = referrerIds.length
+      ? await prisma.cleaner.findMany({
+          where: { id: { in: referrerIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const cleanerNameMap: Record<string, string> = {};
+    for (const c of referrerCleaners) cleanerNameMap[c.id] = c.name;
 
     const jobCountByStatus: Record<string, number> = {};
     for (const g of jobGroups) jobCountByStatus[g.status] = g._count.status;
@@ -222,6 +245,53 @@ export default async function AdminOverviewPage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* ── Referral flywheel ── */}
+        <div className="rounded-2xl border border-[#ddd6cb] bg-white p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#6a625c]">
+                Cleaner referral flywheel
+              </p>
+              <p className="mt-0.5 text-sm text-[#7d7570]">
+                Landlords who signed up via a cleaner&apos;s referral link
+              </p>
+            </div>
+            <div className="rounded-xl border border-[#ddd6cb] px-4 py-2 text-center">
+              <p className="text-2xl font-bold text-[#3c3732]">{referredUsers}</p>
+              <p className="text-[10px] text-[#9a9089]">referral signups</p>
+            </div>
+          </div>
+
+          {topReferrers.length > 0 ? (
+            <div className="mt-4 space-y-2">
+              <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-[#9a9089]">Top referrers</p>
+              {topReferrers.map((r) => {
+                const cid   = r.referred_by_cleaner_id ?? "";
+                const count = r._count.referred_by_cleaner_id;
+                const name  = cleanerNameMap[cid] ?? cid.slice(0, 8) + "…";
+                return (
+                  <div key={cid} className="flex items-center justify-between rounded-xl border border-[#ede8e1] bg-[#faf7f4] px-4 py-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1a1510] text-[11px] font-bold text-white">
+                        {name.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="text-sm font-medium text-[#3c3732]">{name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-[#fff3e3] px-2.5 py-0.5 text-xs font-semibold text-[#c45c0f]">
+                        {count} landlord{count !== 1 ? "s" : ""}
+                      </span>
+                      <span className="text-xs text-[#9a9089]">≈ €{count * 20} earned</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-[#9a9089]">No referral signups yet. Cleaners receive their referral invite after their 3rd accepted job.</p>
+          )}
         </div>
 
         {/* ── Quick links ── */}

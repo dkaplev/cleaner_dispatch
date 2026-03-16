@@ -7,6 +7,7 @@ import {
 } from "@/lib/telegram";
 import { dispatchJob, getResponseMinutes } from "@/lib/dispatch";
 import { createUploadToken } from "@/lib/upload-token";
+import { createCleanerPortalToken } from "@/lib/cleaner-token";
 import {
   notifyLandlordJobAccepted,
   notifyLandlordJobDeclined,
@@ -151,7 +152,7 @@ export async function POST(request: Request) {
     prisma = getPrisma();
     const cleaner = await prisma.cleaner.findUnique({
       where: { id: cleanerId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, referral_code: true },
     });
     if (!cleaner) {
       console.log("[Telegram webhook] Cleaner not found:", cleanerId);
@@ -178,10 +179,17 @@ export async function POST(request: Request) {
       console.log("[Telegram webhook] Updated cleaner", cleanerId, "telegram_chat_id =", chatId);
     }
 
+    const baseUrl   = process.env.NEXTAUTH_URL ?? "https://cleaner-dispatch.vercel.app";
+    const portalToken = createCleanerPortalToken(cleanerId);
+    const portalUrl   = `${baseUrl}/cleaner/portal?token=${portalToken}`;
+
     try {
-      await sendTelegramMessage(
+      await sendTelegramMessageWithUrlButton(
         chatId,
-        `✅ You're linked as <b>${escapeHtml(cleaner.name)}</b>. You'll receive cleaning assignments here.`
+        `✅ You're linked as <b>${escapeHtml(cleaner.name)}</b>. You'll receive cleaning job offers here.\n\n` +
+        `🔗 You also have a <b>personal referral link</b> — share it with landlords you clean for and earn <b>€20 per sign-up</b>.`,
+        "📊 My portal & referral link",
+        portalUrl
       );
     } catch (e) {
       console.error("[Telegram webhook] Failed to send confirmation to user:", e);
@@ -503,6 +511,43 @@ async function handleOfferCallback(callbackQuery: {
           }
         } catch (e) {
           console.error("[Telegram webhook] Failed to send accept confirmation:", e);
+        }
+      }
+
+      // ── Referral invite after 3rd completed/accepted job ──────────────────────
+      if (chatId) {
+        try {
+          const cleaner = await prisma.cleaner.findUnique({
+            where: { id: attempt.cleaner_id },
+            select: { referral_code: true, referral_invite_sent_at: true },
+          });
+          if (cleaner && !cleaner.referral_invite_sent_at && cleaner.referral_code) {
+            const acceptedCount = await prisma.dispatchAttempt.count({
+              where: { cleaner_id: attempt.cleaner_id, offer_status: "accepted" },
+            });
+            if (acceptedCount >= 3) {
+              const baseUrl    = process.env.NEXTAUTH_URL ?? "https://cleaner-dispatch.vercel.app";
+              const portalToken = createCleanerPortalToken(attempt.cleaner_id);
+              const portalUrl   = `${baseUrl}/cleaner/portal?token=${portalToken}`;
+              const refLink     = `${baseUrl}/signup?ref=${cleaner.referral_code}`;
+              await sendTelegramMessageWithUrlButton(
+                chatId,
+                `🎉 <b>You've now completed 3 jobs through Cleaner Dispatch!</b>\n\n` +
+                `Do you clean for other landlords who still manage bookings manually?\n\n` +
+                `Share your personal link and earn <b>€20</b> for every landlord who signs up:\n` +
+                `<code>${refLink}</code>\n\n` +
+                `They get 1 month free — you get €20 when they subscribe. 💰`,
+                "📊 My portal & earnings",
+                portalUrl
+              );
+              await prisma.cleaner.update({
+                where: { id: attempt.cleaner_id },
+                data: { referral_invite_sent_at: new Date() },
+              });
+            }
+          }
+        } catch (e) {
+          console.error("[Telegram webhook] Referral invite error:", e);
         }
       }
 

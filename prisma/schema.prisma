@@ -14,17 +14,18 @@ datasource db {
 }
 
 model User {
-  id               String    @id @default(cuid())
-  email            String    @unique
-  password_hash    String
-  role             String
-  telegram_chat_id String?   // for landlord: receive job status updates in Telegram
-  ingest_token     String?   @unique // random hex; used to build per-landlord email forwarding address
-  created_at       DateTime  @default(now())
-  properties       Property[]
-  cleaners         Cleaner[]
-  jobs             Job[]
-  feedback         Feedback[]
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  password_hash          String
+  role                   String
+  telegram_chat_id       String?   // for landlord: receive job status updates in Telegram
+  ingest_token           String?   @unique // random hex; used to build per-landlord email forwarding address
+  referred_by_cleaner_id String?   // cleaner.id who referred this landlord
+  created_at             DateTime  @default(now())
+  properties             Property[]
+  cleaners               Cleaner[]
+  jobs                   Job[]
+  feedback               Feedback[]
 
   @@map("users")
 }
@@ -112,14 +113,16 @@ model CalendarBooking {
 }
 
 model Cleaner {
-  id               String             @id @default(cuid())
-  landlord_id      String
-  landlord         User               @relation(fields: [landlord_id], references: [id], onDelete: Cascade)
-  name             String
-  telegram_chat_id String?
-  notes            String?
-  is_active        Boolean            @default(true)
-  created_at       DateTime           @default(now())
+  id                      String             @id @default(cuid())
+  landlord_id             String
+  landlord                User               @relation(fields: [landlord_id], references: [id], onDelete: Cascade)
+  name                    String
+  telegram_chat_id        String?
+  notes                   String?
+  is_active               Boolean            @default(true)
+  referral_code           String?            @unique // short code used in /signup?ref=CODE
+  referral_invite_sent_at DateTime?          // when we first sent the "share your link" Telegram message
+  created_at              DateTime           @default(now())
   cleanings        Cleaning[]
   assigned_jobs    Job[]              @relation("AssignedCleaner")
   property_cleaners PropertyCleaner[]

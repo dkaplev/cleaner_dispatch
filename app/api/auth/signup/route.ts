@@ -9,8 +9,9 @@ export async function POST(request: Request) {
   let prisma;
   try {
     const body = await request.json();
-    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    const password = typeof body.password === "string" ? body.password : "";
+    const email        = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password     = typeof body.password === "string" ? body.password : "";
+    const referralCode = typeof body.referralCode === "string" ? body.referralCode.trim() : null;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -34,18 +35,37 @@ export async function POST(request: Request) {
       );
     }
 
+    // Resolve referral: look up cleaner by referral_code
+    let referred_by_cleaner_id: string | null = null;
+    let referrerName: string | null = null;
+    if (referralCode) {
+      const referrer = await prisma.cleaner.findUnique({
+        where: { referral_code: referralCode },
+        select: { id: true, name: true },
+      });
+      if (referrer) {
+        referred_by_cleaner_id = referrer.id;
+        referrerName           = referrer.name;
+      }
+    }
+
     const password_hash = await hash(password, 12);
-    const ingest_token = randomBytes(16).toString("hex");
+    const ingest_token  = randomBytes(16).toString("hex");
     await prisma.user.create({
       data: {
         email,
         password_hash,
         role: ROLE_LANDLORD,
         ingest_token,
+        ...(referred_by_cleaner_id ? { referred_by_cleaner_id } : {}),
       },
     });
 
-    return NextResponse.json({ ok: true, message: "Account created" });
+    return NextResponse.json({
+      ok: true,
+      message: "Account created",
+      ...(referrerName ? { referrerName } : {}),
+    });
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json(
