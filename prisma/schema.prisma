@@ -20,8 +20,9 @@ model User {
   role                   String
   telegram_chat_id       String?   // for landlord: receive job status updates in Telegram
   ingest_token           String?   @unique // random hex; used to build per-landlord email forwarding address
-  referred_by_cleaner_id String?   // cleaner.id who referred this landlord
-  created_at             DateTime  @default(now())
+  referred_by_cleaner_id  String?   // cleaner.id who referred this landlord
+  first_auto_dispatch_at  DateTime? // set when first calendar-triggered job dispatches successfully
+  created_at              DateTime  @default(now())
   properties             Property[]
   cleaners               Cleaner[]
   jobs                   Job[]

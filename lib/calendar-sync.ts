@@ -116,14 +116,14 @@ export async function syncCalendarFeed(
   const feed = await prisma.calendarFeed.findUnique({
     where: { id: feedId },
     include: {
-      property: {
+          property: {
         select: {
           id: true,
           name: true,
           landlord_id: true,
           cleaning_trigger: true,
           checkin_time_default: true,
-          landlord: { select: { telegram_chat_id: true } },
+          landlord: { select: { id: true, telegram_chat_id: true, first_auto_dispatch_at: true } },
         },
       },
     },
@@ -196,7 +196,38 @@ export async function syncCalendarFeed(
       });
 
       // Dispatch to cleaner
-      await dispatchJob(prisma, job.id);
+      const dispatchResult = await dispatchJob(prisma, job.id);
+
+      // ── "First automated dispatch" delight moment ─────────────────────────
+      if (dispatchResult.success && !property.landlord.first_auto_dispatch_at) {
+        const chatId = property.landlord.telegram_chat_id;
+        if (chatId) {
+          try {
+            const baseUrl = process.env.NEXTAUTH_URL ?? "https://cleaner-dispatch.vercel.app";
+            const jobUrl  = `${baseUrl}/dashboard/cleanings/${job.id}`;
+            await sendTelegramMessageWithUrlButton(
+              chatId,
+              `🤖🧹 <b>Your first fully automated cleaning job just dispatched — no message from you needed.</b>\n\n` +
+              `Property: <b>${property.name}</b>\n` +
+              `Cleaner offer sent to: <b>${dispatchResult.attempt.cleaner_name}</b>\n\n` +
+              `Welcome to the future. You'll get a confirmation when they accept.`,
+              "📋 View job",
+              jobUrl
+            );
+          } catch (e) {
+            console.error("[calendar-sync] First dispatch moment notify failed:", e);
+          }
+          // Mark so we never send this again for this landlord
+          try {
+            await prisma.user.update({
+              where: { id: property.landlord_id },
+              data: { first_auto_dispatch_at: new Date() },
+            });
+          } catch (e) {
+            console.error("[calendar-sync] Failed to set first_auto_dispatch_at:", e);
+          }
+        }
+      }
 
       // ── Urgent alert: same-day or next-day check-in ──────────────────────
       const todayStr     = toDateStr(new Date());
