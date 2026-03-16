@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import type { CalendarBookingEntry, DirectJobEntry } from "@/app/api/calendar/bookings/route";
 
 // ─── palette for up to 8 properties ────────────────────────────────────────
@@ -195,6 +196,19 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-[#f7f3ec]">
       <div className="max-w-5xl mx-auto px-4 py-8">
+
+        {/* ── Back link ── */}
+        <div className="mb-5">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-sm text-[#6a625c] hover:text-[#1a1510] transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Dashboard
+          </Link>
+        </div>
 
         {/* ── Header ── */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
