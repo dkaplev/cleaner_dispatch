@@ -301,7 +301,7 @@ export default function Home() {
               {steps.map((s, i) => (
                 <div key={s.n} className="relative">
                   {i < steps.length - 1 && (
-                    <div className="absolute top-7 left-full z-10 hidden h-px w-full -translate-x-3 bg-[#e0cdb3] md:block" />
+                    <div className="absolute top-7 left-full z-10 hidden h-px w-6 bg-[#e0cdb3] md:block" />
                   )}
                   <div className="rounded-2xl border border-[#e8d9c5] bg-white p-6 shadow-sm">
                     <span className="text-2xl font-bold tracking-tight text-[#c45c0f]">{s.n}</span>

@@ -9,8 +9,8 @@ export function DashboardHeader({ userEmail }: { userEmail: string }) {
       <div className="flex items-center gap-4">
         <span className="text-sm text-zinc-600">{userEmail}</span>
         <Link
-          href="/api/auth/signout?callbackUrl=/"
-          className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          href="/signout"
+          className="rounded-lg border border-[#e3dcd1] bg-white px-3 py-1.5 text-sm font-medium text-[#3c3732] hover:bg-[#f7f3ec] transition-colors"
         >
           Sign out
         </Link>
