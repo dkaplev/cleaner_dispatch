@@ -50,6 +50,16 @@ export async function POST(request: Request) {
     const address =
       typeof body.address === "string" ? body.address.trim() || null : null;
 
+    const cleaning_trigger =
+      typeof body.cleaning_trigger === "string" &&
+      ["after_checkout", "before_checkin", "both"].includes(body.cleaning_trigger)
+        ? body.cleaning_trigger
+        : "after_checkout";
+    const checkin_time_default =
+      body.checkin_time_default != null && body.checkin_time_default !== ""
+        ? new Date(body.checkin_time_default as string)
+        : null;
+
     prisma = getPrisma();
     const property = await prisma.property.create({
       data: {
@@ -57,8 +67,10 @@ export async function POST(request: Request) {
         name,
         address,
         checkout_time_default: checkout_time_default && !Number.isNaN(checkout_time_default.getTime()) ? checkout_time_default : null,
+        checkin_time_default: checkin_time_default && !Number.isNaN(checkin_time_default.getTime()) ? checkin_time_default : null,
         cleaning_duration_minutes: cleaning_duration_minutes != null && !Number.isNaN(cleaning_duration_minutes) ? cleaning_duration_minutes : null,
         instructions_text,
+        cleaning_trigger,
       },
     });
     return NextResponse.json(property);
