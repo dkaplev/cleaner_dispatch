@@ -76,6 +76,7 @@ function Step1({
   const [name, setName] = useState("");
   const [checkoutTime, setCheckoutTime] = useState("11:00");
   const [duration, setDuration] = useState("120");
+  const [cleaningTrigger, setCleaningTrigger] = useState("after_checkout");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -91,6 +92,7 @@ function Step1({
           name: name.trim(),
           checkout_time_default: `2000-01-01T${checkoutTime}:00`,
           cleaning_duration_minutes: parseInt(duration, 10) || 120,
+          cleaning_trigger: cleaningTrigger,
         }),
       });
       const data = await res.json();
@@ -128,9 +130,22 @@ function Step1({
           className={inputCls}
         />
       </div>
+      <div>
+        <label className={labelCls}>When to schedule cleaning</label>
+        <select
+          value={cleaningTrigger}
+          onChange={(e) => setCleaningTrigger(e.target.value)}
+          className={inputCls}
+        >
+          <option value="after_checkout">After guest check-out</option>
+          <option value="before_checkin">Before next guest check-in</option>
+          <option value="both">Both (after check-out + before check-in)</option>
+        </select>
+      </div>
       <div className="flex gap-3">
         <div className="flex-1">
           <label className={labelCls}>Default checkout time</label>
+          <p className="text-xs text-[#9a9089]">When guests usually leave</p>
           <input
             type="time"
             value={checkoutTime}
@@ -140,6 +155,7 @@ function Step1({
         </div>
         <div className="flex-1">
           <label className={labelCls}>Cleaning duration (min)</label>
+          <p className="text-xs text-[#9a9089]">How long cleaning takes</p>
           <input
             type="number"
             min={30}
@@ -149,7 +165,7 @@ function Step1({
           />
         </div>
       </div>
-      <p className="text-xs text-[#7d7570]">More settings (channel names, instructions) available later in Properties.</p>
+      <p className="text-xs text-[#7d7570]">Address, instructions, and calendar feeds can be added later in Properties.</p>
       <button type="submit" disabled={saving} className={btn}>
         {saving ? "Saving…" : "Save & continue →"}
       </button>

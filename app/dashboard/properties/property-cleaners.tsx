@@ -88,6 +88,8 @@ export function PropertyCleaners({ propertyId, allCleaners }: Props) {
   const available = allCleaners.filter((c) => !assignedIds.has(c.id));
   const hasNoPrimary = assignments.length > 0 && !assignments.some((a) => a.is_primary);
   const isFirstAssignment = assignments.length === 0;
+  const hasNoFallback = assignments.length === 1 && assignments[0].is_primary && available.length > 0;
+  const primaryName = assignments.find((a) => a.is_primary)?.cleaner.name;
 
   return (
     <div className="mt-8 border-t border-zinc-200 pt-6">
@@ -112,6 +114,11 @@ export function PropertyCleaners({ propertyId, allCleaners }: Props) {
           {hasNoPrimary && (
             <p className="text-sm text-amber-700 bg-amber-50 rounded-md px-3 py-2">
               No primary cleaner set. Set one to enable auto-dispatch.
+            </p>
+          )}
+          {hasNoFallback && (
+            <p className="text-sm text-[#7a5c1e] bg-[#fef9ee] border border-[#f5e0a0] rounded-md px-3 py-2">
+              💡 <strong>Add a fallback cleaner.</strong> If {primaryName} declines or doesn&apos;t respond, jobs will go unassigned. A fallback ensures auto-dispatch never stalls.
             </p>
           )}
           {assignments.map((a) => (
