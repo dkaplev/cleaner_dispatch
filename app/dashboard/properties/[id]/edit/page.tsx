@@ -17,7 +17,7 @@ export default async function EditPropertyPage({
   const { id } = await params;
 
   let prisma;
-  let property: { id: string; name: string; checkout_time_default: Date | null; checkin_time_default: Date | null; cleaning_duration_minutes: number | null; instructions_text: string | null; cleaning_trigger: string; name_booking_com: string | null; name_airbnb: string | null; name_vrbo: string | null } | null = null;
+  let property: { id: string; name: string; checkout_time_default: Date | null; checkin_time_default: Date | null; cleaning_duration_minutes: number | null; instructions_text: string | null; cleaning_trigger: string } | null = null;
   let allCleaners: { id: string; name: string; telegram_chat_id: string | null }[] = [];
   try {
     prisma = getPrisma();
@@ -56,9 +56,6 @@ export default async function EditPropertyPage({
           initialCleaningTrigger={property.cleaning_trigger}
           initialDuration={property.cleaning_duration_minutes ?? ""}
           initialInstructions={property.instructions_text ?? ""}
-          initialNameBookingCom={property.name_booking_com ?? ""}
-          initialNameAirbnb={property.name_airbnb ?? ""}
-          initialNameVrbo={property.name_vrbo ?? ""}
           hideButtons
         />
         <PropertyCleaners propertyId={property.id} allCleaners={allCleaners} />

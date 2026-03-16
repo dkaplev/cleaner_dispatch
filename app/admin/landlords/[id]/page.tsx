@@ -54,9 +54,6 @@ export default async function AdminLandlordDetailPage({
           select: {
             id: true,
             name: true,
-            name_airbnb: true,
-            name_booking_com: true,
-            name_vrbo: true,
             cleaning_trigger: true,
             created_at: true,
             property_cleaners: {
@@ -149,17 +146,6 @@ export default async function AdminLandlordDetailPage({
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-sm font-medium text-[#3c3732]">{p.name}</p>
-                      <div className="mt-0.5 flex flex-wrap gap-1">
-                        {p.name_airbnb && (
-                          <span className="rounded bg-[#f0ebe3] px-1.5 py-0.5 text-[10px] text-[#4b443e]">Airbnb: {p.name_airbnb}</span>
-                        )}
-                        {p.name_booking_com && (
-                          <span className="rounded bg-[#f0ebe3] px-1.5 py-0.5 text-[10px] text-[#4b443e]">Booking: {p.name_booking_com}</span>
-                        )}
-                        {p.name_vrbo && (
-                          <span className="rounded bg-[#f0ebe3] px-1.5 py-0.5 text-[10px] text-[#4b443e]">Vrbo: {p.name_vrbo}</span>
-                        )}
-                      </div>
                     </div>
                     <span className="shrink-0 rounded-full bg-[#ede8e1] px-2 py-0.5 text-[10px] text-[#5a524c]">
                       {p.cleaning_trigger ?? "after_checkout"}

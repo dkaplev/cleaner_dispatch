@@ -15,9 +15,6 @@ type Props =
       initialDuration: string | number;
       initialInstructions: string;
       initialCleaningTrigger: string;
-      initialNameBookingCom?: string;
-      initialNameAirbnb?: string;
-      initialNameVrbo?: string;
       /** When true the form renders without action buttons (used when buttons are placed below the cleaner section). */
       hideButtons?: boolean;
     };
@@ -41,16 +38,6 @@ export function PropertyForm(props: Props) {
   const [instructions, setInstructions] = useState(
     isEdit ? props.initialInstructions : ""
   );
-  const [nameBookingCom, setNameBookingCom] = useState(
-    isEdit && "initialNameBookingCom" in props ? (props.initialNameBookingCom ?? "") : ""
-  );
-  const [nameAirbnb, setNameAirbnb] = useState(
-    isEdit && "initialNameAirbnb" in props ? (props.initialNameAirbnb ?? "") : ""
-  );
-  const [nameVrbo, setNameVrbo] = useState(
-    isEdit && "initialNameVrbo" in props ? (props.initialNameVrbo ?? "") : ""
-  );
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -68,12 +55,6 @@ export function PropertyForm(props: Props) {
         const n = parseInt(duration, 10);
         if (!Number.isNaN(n) && n > 0) body.cleaning_duration_minutes = n;
       }
-      if (isEdit) {
-        body.name_booking_com = nameBookingCom.trim() || null;
-        body.name_airbnb = nameAirbnb.trim() || null;
-        body.name_vrbo = nameVrbo.trim() || null;
-      }
-
       const url = isEdit ? `/api/properties/${props.id}` : "/api/properties";
       const method = isEdit ? "PATCH" : "POST";
       const res = await fetch(url, {
@@ -195,47 +176,6 @@ export function PropertyForm(props: Props) {
           className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
         />
       </div>
-      {isEdit && (
-        <>
-          <p className="text-sm font-medium text-zinc-700">Channel names (for import matching)</p>
-          <p className="text-xs text-zinc-500">
-            Set the exact name as shown on each platform so pasted/forwarded booking confirmations can auto-select this property.
-          </p>
-          <div>
-            <label htmlFor="name_booking_com" className="block text-xs text-zinc-600">Booking.com property name</label>
-            <input
-              id="name_booking_com"
-              type="text"
-              placeholder="e.g. Sunset Villa Paphos"
-              value={nameBookingCom}
-              onChange={(e) => setNameBookingCom(e.target.value)}
-              className="mt-0.5 block w-full rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-900"
-            />
-          </div>
-          <div>
-            <label htmlFor="name_airbnb" className="block text-xs text-zinc-600">Airbnb listing name</label>
-            <input
-              id="name_airbnb"
-              type="text"
-              placeholder="e.g. Charming Sea View Apartment, Limassol"
-              value={nameAirbnb}
-              onChange={(e) => setNameAirbnb(e.target.value)}
-              className="mt-0.5 block w-full rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-900"
-            />
-          </div>
-          <div>
-            <label htmlFor="name_vrbo" className="block text-xs text-zinc-600">Vrbo property name</label>
-            <input
-              id="name_vrbo"
-              type="text"
-              placeholder="e.g. Luxury Beachfront Villa — Ayia Napa"
-              value={nameVrbo}
-              onChange={(e) => setNameVrbo(e.target.value)}
-              className="mt-0.5 block w-full rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-900"
-            />
-          </div>
-        </>
-      )}
       {!hideButtons && (
         <div className="flex gap-3">
           <button
