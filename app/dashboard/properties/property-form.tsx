@@ -10,6 +10,7 @@ type Props =
       action: "edit";
       id: string;
       initialName: string;
+      initialAddress: string;
       initialCheckoutTime: string;
       initialCheckinTime: string;
       initialDuration: string | number;
@@ -26,7 +27,8 @@ export function PropertyForm(props: Props) {
 
   const isEdit = props.action === "edit";
   const hideButtons = isEdit && "hideButtons" in props ? (props.hideButtons ?? false) : false;
-  const [name, setName] = useState(isEdit ? props.initialName : "");
+  const [name, setName]       = useState(isEdit ? props.initialName : "");
+  const [address, setAddress] = useState(isEdit && "initialAddress" in props ? (props.initialAddress ?? "") : "");
   const [checkoutTime, setCheckoutTime] = useState(isEdit ? props.initialCheckoutTime : "");
   const [checkinTime, setCheckinTime] = useState(isEdit ? props.initialCheckinTime : "");
   const [cleaningTrigger, setCleaningTrigger] = useState(
@@ -45,6 +47,7 @@ export function PropertyForm(props: Props) {
     try {
       const body: Record<string, unknown> = {
         name: name.trim(),
+        address: address.trim() || null,
         instructions_text: instructions.trim() || null,
       };
       body.cleaning_trigger = cleaningTrigger;
@@ -87,7 +90,7 @@ export function PropertyForm(props: Props) {
       )}
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-zinc-700">
-          Name *
+          Property name *
         </label>
         <input
           id="name"
@@ -95,6 +98,22 @@ export function PropertyForm(props: Props) {
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
+          className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+        />
+      </div>
+      <div>
+        <label htmlFor="address" className="block text-sm font-medium text-zinc-700">
+          Address
+        </label>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          Shown to cleaners when a job is dispatched so they know where to go.
+        </p>
+        <input
+          id="address"
+          type="text"
+          placeholder="e.g. 12 Sea View Street, Limassol 3042"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
           className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
         />
       </div>

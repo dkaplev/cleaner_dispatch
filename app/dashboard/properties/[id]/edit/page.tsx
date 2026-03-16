@@ -17,7 +17,7 @@ export default async function EditPropertyPage({
   const { id } = await params;
 
   let prisma;
-  let property: { id: string; name: string; checkout_time_default: Date | null; checkin_time_default: Date | null; cleaning_duration_minutes: number | null; instructions_text: string | null; cleaning_trigger: string } | null = null;
+  let property: { id: string; name: string; address: string | null; checkout_time_default: Date | null; checkin_time_default: Date | null; cleaning_duration_minutes: number | null; instructions_text: string | null; cleaning_trigger: string } | null = null;
   let allCleaners: { id: string; name: string; telegram_chat_id: string | null }[] = [];
   try {
     prisma = getPrisma();
@@ -51,6 +51,7 @@ export default async function EditPropertyPage({
           action="edit"
           id={property.id}
           initialName={property.name}
+          initialAddress={property.address ?? ""}
           initialCheckoutTime={checkoutTimeForForm}
           initialCheckinTime={checkinTimeForForm}
           initialCleaningTrigger={property.cleaning_trigger}

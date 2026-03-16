@@ -55,33 +55,35 @@ export default async function CleaningsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-6">
+    <div className="min-h-screen bg-[#f8f6f2]">
       <DashboardHeader userEmail={session.user.email ?? ""} />
-      <main className="mt-8">
-        <div className="flex items-center justify-between border-b border-zinc-200 pb-4">
-          <h2 className="text-lg font-semibold text-zinc-900">Dispatch</h2>
+      <main className="mx-auto max-w-5xl px-6 pb-16 pt-8">
+        <div className="flex flex-wrap items-start justify-between gap-4 pb-4">
+          <div>
+            <h1 className="text-xl font-bold text-[#3c3732]">Cleaning Jobs</h1>
+            <p className="mt-0.5 text-sm text-[#7d7570]">
+              All jobs dispatched automatically from calendar feeds. Dispatch, review, and manage from here.
+            </p>
+          </div>
           <div className="flex gap-2">
             <Link
               href="/dashboard/cleanings/import"
-              className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              className="rounded-full border border-[#d8d0c4] bg-[#fbf9f5] px-4 py-2 text-sm font-medium text-[#4b443e] hover:bg-[#f0ebe3] transition-colors"
             >
               Import booking
             </Link>
             <Link
               href="/dashboard/cleanings/new"
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+              className="rounded-full bg-[#3c3732] px-4 py-2 text-sm font-medium text-white hover:bg-[#2d2925] transition-colors"
             >
-              Assign job
+              + New job
             </Link>
           </div>
         </div>
-        <p className="mt-2 text-sm text-zinc-500">
-          One place for all cleaning jobs. Choose a cleaner or let the system use primary/fallback. The cleaner gets a Telegram message with Accept/Decline and, after they accept, a link to upload photos and mark done.
-        </p>
         <DispatchList jobs={jobsForList} />
-        <p className="mt-4 text-sm text-zinc-500">
-          <Link href="/dashboard" className="text-zinc-700 underline hover:no-underline">
-            Back to dashboard
+        <p className="mt-6 text-sm">
+          <Link href="/dashboard" className="text-[#7d7570] hover:text-[#3c3732] hover:underline">
+            ← Dashboard
           </Link>
         </p>
       </main>

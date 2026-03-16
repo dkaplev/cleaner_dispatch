@@ -11,6 +11,7 @@ export type CalendarBookingEntry = {
   property_name: string;
   source: string;
   feed_label: string | null;
+  job_id: string | null;  // set if a cleaning job was created for this booking
 };
 
 /**
@@ -49,6 +50,7 @@ export async function GET(req: Request) {
         uid: true,
         checkin: true,
         checkout: true,
+        job_id: true,
         feed: {
           select: {
             source: true,
@@ -69,6 +71,7 @@ export async function GET(req: Request) {
       property_name: b.feed.property.name,
       source:        b.feed.source,
       feed_label:    b.feed.label,
+      job_id:        b.job_id,
     }));
 
     return NextResponse.json(result);

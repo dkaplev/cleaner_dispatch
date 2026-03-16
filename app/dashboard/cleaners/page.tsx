@@ -103,22 +103,27 @@ export default async function CleanersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-6">
+    <div className="min-h-screen bg-[#f8f6f2]">
       <DashboardHeader userEmail={session.user.email ?? ""} />
-      <main className="mt-8">
-        <div className="flex items-center justify-between border-b border-zinc-200 pb-4">
-          <h2 className="text-lg font-semibold text-zinc-900">Cleaners</h2>
+      <main className="mx-auto max-w-5xl px-6 pb-16 pt-8">
+        <div className="flex items-center justify-between pb-4">
+          <div>
+            <h1 className="text-xl font-bold text-[#3c3732]">Cleaners</h1>
+            <p className="mt-0.5 text-sm text-[#7d7570]">
+              Manage your cleaning team. Share Telegram links so they receive job offers.
+            </p>
+          </div>
           <Link
             href="/dashboard/cleaners/new"
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            className="rounded-full bg-[#3c3732] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#2d2925] transition-colors"
           >
-            Add cleaner
+            + Add cleaner
           </Link>
         </div>
         <CleanerList initialCleaners={cleaners} />
-        <p className="mt-4 text-sm text-zinc-500">
-          <Link href="/dashboard" className="text-zinc-700 underline hover:no-underline">
-            Back to dashboard
+        <p className="mt-6 text-sm">
+          <Link href="/dashboard" className="text-[#7d7570] hover:text-[#3c3732] hover:underline">
+            ← Dashboard
           </Link>
         </p>
       </main>

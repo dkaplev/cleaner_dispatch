@@ -47,12 +47,15 @@ export async function POST(request: Request) {
           : null;
     const instructions_text =
       typeof body.instructions_text === "string" ? body.instructions_text.trim() || null : null;
+    const address =
+      typeof body.address === "string" ? body.address.trim() || null : null;
 
     prisma = getPrisma();
     const property = await prisma.property.create({
       data: {
         landlord_id: session.user.id,
         name,
+        address,
         checkout_time_default: checkout_time_default && !Number.isNaN(checkout_time_default.getTime()) ? checkout_time_default : null,
         cleaning_duration_minutes: cleaning_duration_minutes != null && !Number.isNaN(cleaning_duration_minutes) ? cleaning_duration_minutes : null,
         instructions_text,

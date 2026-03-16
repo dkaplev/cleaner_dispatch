@@ -54,6 +54,7 @@ function buildMonthGrid(year: number, month: number): (Date | null)[] {
 // ─── booking indicator for a single day cell ────────────────────────────────
 interface BookingChip {
   id: string;
+  job_id: string | null;
   property_name: string;
   isCheckin: boolean;
   isCheckout: boolean;
@@ -73,6 +74,7 @@ function getChipsForDay(
     if (checkin > dateMs || dateMs >= checkout) continue;
     chips.push({
       id:            b.id,
+      job_id:        b.job_id,
       property_name: b.property_name,
       isCheckin:     checkin === dateMs,
       isCheckout:    checkout === dateMs + 86400_000,
@@ -346,19 +348,39 @@ export default function CalendarPage() {
 
                   {/* Booking chips */}
                   {chips.map((chip) => (
-                    <div
-                      key={chip.id + dayStr}
-                      className="rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate"
-                      style={{
-                        background:  chip.palette.bg,
-                        color:       chip.palette.text,
-                        borderLeft:  `3px solid ${chip.palette.border}`,
-                      }}
-                      title={`${chip.property_name}${chip.isCheckin ? " — check-in" : chip.isCheckout ? " — check-out" : ""}`}
-                    >
-                      {chip.isCheckin  && <span className="mr-0.5">→</span>}
-                      {chip.isCheckout && <span className="mr-0.5">←</span>}
-                      <span className="truncate">{chip.property_name}</span>
+                    <div key={chip.id + dayStr} className="space-y-0.5">
+                      <div
+                        className="rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate"
+                        style={{
+                          background: chip.palette.bg,
+                          color:      chip.palette.text,
+                          borderLeft: `3px solid ${chip.palette.border}`,
+                        }}
+                        title={`${chip.property_name}${chip.isCheckin ? " — check-in" : chip.isCheckout ? " — check-out" : ""}`}
+                      >
+                        {chip.isCheckin  && <span className="mr-0.5">→</span>}
+                        {chip.isCheckout && <span className="mr-0.5">←</span>}
+                        <span className="truncate">{chip.property_name}</span>
+                      </div>
+                      {/* Cleaning job indicator on checkout day */}
+                      {chip.isCheckout && (
+                        chip.job_id ? (
+                          <a
+                            href={`/dashboard/jobs/${chip.job_id}`}
+                            className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 truncate"
+                            title="Cleaning job scheduled — click to view"
+                          >
+                            🧹 Cleaning scheduled
+                          </a>
+                        ) : (
+                          <div
+                            className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-amber-700 bg-amber-50 truncate"
+                            title="No cleaning job yet for this checkout"
+                          >
+                            ⚠ No cleaning job
+                          </div>
+                        )
+                      )}
                     </div>
                   ))}
                 </div>

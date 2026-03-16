@@ -43,6 +43,8 @@ export async function PATCH(
           : null;
     const instructions_text =
       typeof body.instructions_text === "string" ? body.instructions_text.trim() || null : null;
+    const address =
+      typeof body.address === "string" ? body.address.trim() || null : null;
     const name_booking_com = typeof body.name_booking_com === "string" ? body.name_booking_com.trim() || null : null;
     const name_airbnb = typeof body.name_airbnb === "string" ? body.name_airbnb.trim() || null : null;
     const name_vrbo = typeof body.name_vrbo === "string" ? body.name_vrbo.trim() || null : null;
@@ -60,6 +62,7 @@ export async function PATCH(
       where: { id },
       data: {
         name,
+        address,
         checkout_time_default: checkout_time_default && !Number.isNaN(checkout_time_default.getTime()) ? checkout_time_default : null,
         checkin_time_default: checkin_time_default && !Number.isNaN(checkin_time_default.getTime()) ? checkin_time_default : null,
         cleaning_duration_minutes: cleaning_duration_minutes != null && !Number.isNaN(cleaning_duration_minutes) ? cleaning_duration_minutes : null,

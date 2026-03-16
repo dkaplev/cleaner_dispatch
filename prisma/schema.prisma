@@ -56,6 +56,7 @@ model Property {
   landlord_id               String
   landlord                  User              @relation(fields: [landlord_id], references: [id], onDelete: Cascade)
   name                      String
+  address                   String?
   checkout_time_default     DateTime?
   cleaning_duration_minutes Int?
   instructions_text         String?

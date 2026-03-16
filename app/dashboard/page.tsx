@@ -92,6 +92,14 @@ export default async function DashboardPage() {
   let jobsReview = 0;     // done_awaiting_review
   let jobsCompleted = 0;  // completed (last 30 days)
 
+  type AttentionJob = {
+    id: string;
+    property_name: string;
+    window_start: string;
+    status: string;
+  };
+  let attentionJobs: AttentionJob[] = [];
+
   const botUsername = process.env.TELEGRAM_BOT_USERNAME?.trim();
 
   try {
@@ -144,6 +152,28 @@ export default async function DashboardPage() {
       else if (g.status === "completed") jobsCompleted += n;
     }
 
+    // Jobs needing landlord attention
+    const urgentJobs = await prisma.job.findMany({
+      where: {
+        landlord_id: session.user.id,
+        status: { in: ["new", "done_awaiting_review"] },
+      },
+      orderBy: { window_start: "asc" },
+      take: 5,
+      select: {
+        id: true,
+        status: true,
+        window_start: true,
+        property: { select: { name: true } },
+      },
+    });
+    attentionJobs = urgentJobs.map((j) => ({
+      id: j.id,
+      property_name: j.property.name,
+      window_start: j.window_start.toISOString(),
+      status: j.status,
+    }));
+
     await prisma.$disconnect();
   } catch {
     // fall through with zero counts
@@ -181,19 +211,19 @@ export default async function DashboardPage() {
               label="Waiting"
               value={jobsPending}
               sub="new or offered"
-              href="/dashboard/jobs"
+              href="/dashboard/cleanings"
             />
             <StatCard
               label="Active"
               value={jobsActive}
               sub="accepted or in progress"
-              href="/dashboard/jobs"
+              href="/dashboard/cleanings"
             />
             <StatCard
               label="To review"
               value={jobsReview}
               sub="awaiting your check"
-              href="/dashboard/jobs"
+              href="/dashboard/cleanings"
             />
           </div>
         </section>
@@ -205,6 +235,37 @@ export default async function DashboardPage() {
           review={jobsReview}
           completed={jobsCompleted}
         />
+
+        {/* ── Needs attention ── */}
+        {attentionJobs.length > 0 && (
+          <section>
+            <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">Needs attention</p>
+            <div className="rounded-2xl border border-[#e3dcd1] bg-[#fbf9f5] divide-y divide-[#f0ebe3] overflow-hidden">
+              {attentionJobs.map((j) => {
+                const isReview = j.status === "done_awaiting_review";
+                const date = new Date(j.window_start).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+                return (
+                  <Link
+                    key={j.id}
+                    href={isReview ? `/dashboard/jobs/${j.id}` : `/dashboard/cleanings`}
+                    className="flex items-center justify-between px-5 py-3.5 hover:bg-[#f5f0e8] transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`h-2 w-2 rounded-full flex-shrink-0 ${isReview ? "bg-violet-500" : "bg-blue-500"}`} />
+                      <div>
+                        <p className="text-sm font-medium text-[#3c3732]">{j.property_name}</p>
+                        <p className="text-xs text-[#9a9089]">{date}</p>
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${isReview ? "bg-violet-50 text-violet-700" : "bg-blue-50 text-blue-700"}`}>
+                      {isReview ? "Review cleaning" : "Not dispatched"}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* ── Nav cards ── */}
         <section>
