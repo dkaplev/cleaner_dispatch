@@ -4,9 +4,9 @@ import Link from "next/link";
 
 const benefits = [
   {
-    icon: "📩",
+    icon: "📅",
     title: "Bookings become jobs automatically",
-    body: "Forward a confirmation email from Airbnb, Booking.com, or Vrbo — a cleaning job is created instantly with the right dates, no typing required.",
+    body: "Paste your iCal feed link from Airbnb, Booking.com, or Vrbo once. Every new reservation syncs automatically and creates a cleaning job — no emails, no manual entry.",
   },
   {
     icon: "💬",
@@ -23,8 +23,8 @@ const benefits = [
 const steps = [
   {
     n: "01",
-    title: "Forward the booking email",
-    body: "Set up a Gmail filter once. Every confirmation from Airbnb, Booking.com, or Vrbo is forwarded automatically and turns into a cleaning job.",
+    title: "Connect your booking calendar",
+    body: "Paste your iCal feed link from Airbnb, Booking.com, Vrbo, or any platform. New reservations sync automatically and turn into cleaning jobs — no email setup needed.",
   },
   {
     n: "02",
@@ -39,7 +39,7 @@ const steps = [
 ];
 
 const differentiators = [
-  { label: "Auto-dispatch from booking emails", us: true, manual: false },
+  { label: "Auto-dispatch from booking calendars", us: true, manual: false },
   { label: "Telegram for cleaners — no new app to learn", us: true, manual: false },
   { label: "Fallback cleaner if primary declines", us: true, manual: false },
   { label: "Photo proof after every cleaning", us: true, manual: false },
@@ -56,7 +56,7 @@ const faqs = [
   },
   {
     q: "Which booking platforms are supported?",
-    a: "Airbnb, Booking.com, and Vrbo are fully supported. The parser handles their confirmation email formats automatically. Other platforms can be added by request.",
+    a: "Any platform that provides an iCal (.ics) export link is supported — including Airbnb, Booking.com, Vrbo, Expedia, TripAdvisor, and many others. You simply paste the link in the property settings and syncing starts immediately.",
   },
   {
     q: "What happens if the cleaner declines or doesn't respond?",
@@ -64,7 +64,7 @@ const faqs = [
   },
   {
     q: "How long does the initial setup take?",
-    a: "About 10–15 minutes. Our onboarding wizard walks you through adding a property, adding a cleaner, sharing their Telegram link, and setting up email forwarding step by step.",
+    a: "About 10–15 minutes. Our onboarding wizard walks you through adding a property, adding a cleaner, sharing their Telegram link, and pasting your first calendar feed — step by step.",
   },
   {
     q: "Is there a mobile app?",
@@ -194,7 +194,7 @@ export default function Home() {
                 <span className="text-[#c45c0f]">Cleaned.</span>
               </h1>
               <p className="mt-6 max-w-lg text-base leading-relaxed text-[#3d342c] md:text-lg">
-                Cleaner Dispatch turns booking confirmation emails into dispatched cleaning jobs — automatically. Your cleaner gets the offer on Telegram, accepts in one tap, and sends you photo proof when done.
+                Cleaner Dispatch syncs with your booking calendars from Airbnb, Booking.com, Vrbo, and more — turning every new reservation into a dispatched cleaning job automatically. Your cleaner gets the offer on Telegram, accepts in one tap, and sends you photo proof when done.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a
@@ -221,7 +221,7 @@ export default function Home() {
                   <TelegramMockup />
                   {/* floating "booking received" badge */}
                   <div className="absolute -top-4 -right-4 rounded-xl border border-[#e8d9c5] bg-white px-3 py-2 shadow-md">
-                    <p className="text-[10px] font-semibold text-[#1a1510]">📩 Booking received</p>
+                    <p className="text-[10px] font-semibold text-[#1a1510]">📅 Calendar synced</p>
                     <p className="text-[9px] text-[#6b5f54]">Airbnb · 3 nights · Auto-dispatched</p>
                   </div>
                   {/* floating "photo proof" badge */}
@@ -327,7 +327,7 @@ export default function Home() {
               </p>
               <ul className="mt-6 space-y-3">
                 {[
-                  "📩 New booking ingested — dispatch pending",
+                  "📅 New booking synced — dispatch pending",
                   "✅ Anna K. accepted — cleaning on Friday",
                   "📸 Cleaning done — 4 photos uploaded",
                   "🚨 No response — manual action needed",
@@ -343,7 +343,7 @@ export default function Home() {
             <div className="flex justify-center">
               <div className="w-full max-w-sm space-y-3">
                 {[
-                  { icon: "📩", title: "New booking — Sea View Apt", sub: "Airbnb · Checkout Fri 28 Jun · Auto-dispatched", color: "bg-[#fff3e3]" },
+                  { icon: "📅", title: "New booking — Sea View Apt", sub: "Airbnb · Checkout Fri 28 Jun · Auto-dispatched", color: "bg-[#fff3e3]" },
                   { icon: "✅", title: "Anna K. accepted", sub: "Sea View Apt · Fri 28 Jun 11:00–15:00", color: "bg-[#eef5ee]" },
                   { icon: "📸", title: "Cleaning done — review ready", sub: "4 photos uploaded · Rate the cleaning", color: "bg-[#f0f5ff]" },
                 ].map((n) => (
@@ -489,7 +489,7 @@ export default function Home() {
               </a>
             </div>
             <div className="mt-6 flex flex-wrap justify-center gap-6">
-              {["✓ Airbnb, Booking.com, Vrbo", "✓ Telegram dispatch", "✓ Photo verification", "✓ 10-min setup"].map((f) => (
+              {["✓ iCal sync — any platform", "✓ Telegram dispatch", "✓ Photo verification", "✓ 10-min setup"].map((f) => (
                 <span key={f} className="text-xs text-[#9c8a7c]">{f}</span>
               ))}
             </div>
