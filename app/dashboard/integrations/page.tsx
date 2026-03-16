@@ -32,7 +32,8 @@ export default async function IntegrationsPage() {
   redirect("/dashboard/properties");
 
   // eslint-disable-next-line no-unreachable
-  const token = await getOrCreateToken(session!.user!.id!);
+  const s = session!;
+  const token = await getOrCreateToken(s.user!.id!);
   const centralEmail = process.env.INGEST_CENTRAL_EMAIL?.trim() ?? "";
   const forwardingAddress = centralEmail
     ? centralEmail.replace("@", `+${token}@`)
@@ -40,7 +41,7 @@ export default async function IntegrationsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 p-6">
-      <DashboardHeader userEmail={session.user.email ?? ""} />
+      <DashboardHeader userEmail={s.user?.email ?? ""} />
       <main className="mt-8 max-w-xl">
         <div className="mb-4">
           <Link href="/dashboard" className="text-sm text-zinc-500 hover:text-zinc-800">
