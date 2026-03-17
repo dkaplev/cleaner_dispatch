@@ -104,7 +104,12 @@ const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
 };
 
 // ─── main component ──────────────────────────────────────────────────────────
-export default function CalendarPage() {
+/**
+ * CalendarView — embeddable calendar.
+ * Pass `embedded={true}` to suppress the standalone page chrome
+ * (back link, min-h-screen wrapper).
+ */
+export function CalendarView({ embedded = false }: { embedded?: boolean }) {
   const today = new Date();
   const [year,  setYear]  = useState(today.getUTCFullYear());
   const [month, setMonth] = useState(today.getUTCMonth());
@@ -195,21 +200,23 @@ export default function CalendarPage() {
   const totalItems = bookings.length + directJobs.length;
 
   return (
-    <div className="min-h-screen bg-[#f7f3ec]">
-      <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className={embedded ? "" : "min-h-screen bg-[#f7f3ec]"}>
+      <div className={embedded ? "" : "max-w-5xl mx-auto px-4 py-8"}>
 
-        {/* ── Back link ── */}
-        <div className="mb-5">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-1.5 text-sm text-[#6a625c] hover:text-[#1a1510] transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Dashboard
-          </Link>
-        </div>
+        {/* ── Back link (standalone page only) ── */}
+        {!embedded && (
+          <div className="mb-5">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 text-sm text-[#6a625c] hover:text-[#1a1510] transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Dashboard
+            </Link>
+          </div>
+        )}
 
         {/* ── Header ── */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -466,6 +473,17 @@ export default function CalendarPage() {
             <span>Click legend to toggle properties</span>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── standalone page wrapper ─────────────────────────────────────────────────
+export default function CalendarPage() {
+  return (
+    <div className="min-h-screen bg-[#f7f3ec]">
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        <CalendarView embedded={false} />
       </div>
     </div>
   );

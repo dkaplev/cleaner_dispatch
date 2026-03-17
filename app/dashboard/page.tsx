@@ -6,6 +6,7 @@ import { DashboardHeader } from "./dashboard-header";
 import { SetupChecklist } from "./setup-checklist";
 import { JobsOverview } from "./jobs-overview";
 import { FeedbackWidget } from "./feedback-widget";
+import { CalendarView } from "./calendar/page";
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ function StatCard({
   href?: string;
 }) {
   const inner = (
-    <div className="flex min-h-[104px] flex-col justify-between rounded-2xl border border-[#e3dcd1] bg-[#fbf9f5] p-5">
+    <div className="flex h-full min-h-[104px] flex-col justify-between rounded-2xl border border-[#e3dcd1] bg-[#fbf9f5] p-5">
       <p className="text-xs font-medium tracking-[0.12em] uppercase text-[#6a625c]">{label}</p>
       <div>
         <p className="text-3xl font-semibold tracking-tight text-[#3c3732]">{value}</p>
@@ -31,46 +32,12 @@ function StatCard({
   );
   if (href) {
     return (
-      <Link href={href} className="block transition hover:scale-[1.01]">
+      <Link href={href} className="block h-full transition hover:scale-[1.01]">
         {inner}
       </Link>
     );
   }
   return inner;
-}
-
-// ── Nav card ──────────────────────────────────────────────────────────────────
-
-function NavCard({
-  title,
-  description,
-  href,
-  badge,
-}: {
-  title: string;
-  description: string;
-  href: string;
-  badge?: string | number;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex flex-col justify-between rounded-2xl border border-[#e3dcd1] bg-[#fbf9f5] p-6 transition hover:bg-[#f5f0e8] hover:border-[#d8d0c4]"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-base font-semibold text-[#3c3732]">{title}</p>
-        {badge !== undefined && badge !== "" && (
-          <span className="rounded-full bg-[#ece5dc] px-2.5 py-0.5 text-xs font-semibold text-[#4b443e]">
-            {badge}
-          </span>
-        )}
-      </div>
-      <p className="mt-2 text-sm leading-6 text-[#615952]">{description}</p>
-      <p className="mt-4 text-xs font-medium text-[#4b443e] transition group-hover:underline">
-        Open →
-      </p>
-    </Link>
-  );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -152,11 +119,14 @@ export default async function DashboardPage() {
       else if (g.status === "completed") jobsCompleted += n;
     }
 
-    // Jobs needing landlord attention
+    // Jobs needing landlord attention — only future / today's jobs
+    const todayMidnight = new Date();
+    todayMidnight.setUTCHours(0, 0, 0, 0);
     const urgentJobs = await prisma.job.findMany({
       where: {
         landlord_id: session.user.id,
         status: { in: ["new", "done_awaiting_review"] },
+        window_start: { gte: todayMidnight },
       },
       orderBy: { window_start: "asc" },
       take: 5,
@@ -201,29 +171,21 @@ export default async function DashboardPage() {
           ]}
         />
 
-        {/* ── Stats row ── */}
+        {/* ── Overview: Properties + Cleaners ── */}
         <section>
           <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">Overview</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <StatCard label="Properties" value={propertyCount} href="/dashboard/properties" />
-            <StatCard label="Cleaners" value={cleanerCount} href="/dashboard/cleaners" />
+          <div className="grid grid-cols-2 gap-3">
             <StatCard
-              label="Waiting"
-              value={jobsPending}
-              sub="new or offered"
-              href="/dashboard/cleanings"
+              label="Properties"
+              value={propertyCount}
+              sub={propertyCount === 1 ? "1 property" : `${propertyCount} properties`}
+              href="/dashboard/properties"
             />
             <StatCard
-              label="Active"
-              value={jobsActive}
-              sub="accepted or in progress"
-              href="/dashboard/cleanings"
-            />
-            <StatCard
-              label="To review"
-              value={jobsReview}
-              sub="awaiting your check"
-              href="/dashboard/cleanings"
+              label="Cleaners"
+              value={cleanerCount}
+              sub={cleanerCount === 1 ? "1 cleaner" : `${cleanerCount} cleaners`}
+              href="/dashboard/cleaners"
             />
           </div>
         </section>
@@ -236,7 +198,7 @@ export default async function DashboardPage() {
           completed={jobsCompleted}
         />
 
-        {/* ── Needs attention ── */}
+        {/* ── Needs attention (future jobs only) ── */}
         {attentionJobs.length > 0 && (
           <section>
             <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">Needs attention</p>
@@ -251,13 +213,13 @@ export default async function DashboardPage() {
                     className="flex items-center justify-between px-5 py-3.5 hover:bg-[#f5f0e8] transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <span className={`h-2 w-2 rounded-full flex-shrink-0 ${isReview ? "bg-violet-500" : "bg-blue-500"}`} />
+                      <span className={`h-2 w-2 rounded-full flex-shrink-0 ${isReview ? "bg-violet-500" : "bg-amber-500"}`} />
                       <div>
                         <p className="text-sm font-medium text-[#3c3732]">{j.property_name}</p>
                         <p className="text-xs text-[#9a9089]">{date}</p>
                       </div>
                     </div>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${isReview ? "bg-violet-50 text-violet-700" : "bg-blue-50 text-blue-700"}`}>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${isReview ? "bg-violet-50 text-violet-700" : "bg-amber-50 text-amber-700"}`}>
                       {isReview ? "Review cleaning" : "Not dispatched"}
                     </span>
                   </Link>
@@ -267,44 +229,11 @@ export default async function DashboardPage() {
           </section>
         )}
 
-        {/* ── Nav cards ── */}
+        {/* ── Bookings Calendar ── */}
         <section>
-          <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">Manage</p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <NavCard
-              title="Jobs"
-              description="Review all cleaning jobs, check statuses, and dispatch manually when needed."
-              href="/dashboard/cleanings"
-              badge={jobsPending + jobsActive + jobsReview > 0 ? jobsPending + jobsActive + jobsReview : undefined}
-            />
-            <NavCard
-              title="Import booking"
-              description="Paste a booking confirmation email to create a cleaning job in seconds."
-              href="/dashboard/cleanings/import"
-            />
-            <NavCard
-              title="New cleaning"
-              description="Manually create a cleaning window without a booking confirmation."
-              href="/dashboard/cleanings/new"
-            />
-            <NavCard
-              title="Properties"
-              description="Add properties, set checkout times, cleaning durations, and assign cleaners."
-              href="/dashboard/properties"
-              badge={propertyCount}
-            />
-            <NavCard
-              title="Cleaners"
-              description="Manage your cleaner team. Share Telegram links so they receive job offers."
-              href="/dashboard/cleaners"
-              badge={cleanerCount}
-            />
-            <NavCard
-              title="Bookings Calendar"
-              description="View all upcoming bookings across your properties on a single month calendar."
-              href="/dashboard/calendar"
-            />
-            {/* Email forwarding card hidden — calendar sync is now primary ingestion */}
+          <p className="mb-3 text-xs font-medium tracking-[0.13em] uppercase text-[#6a625c]">Bookings Calendar</p>
+          <div className="rounded-2xl border border-[#e3dcd1] bg-white overflow-hidden shadow-sm">
+            <CalendarView embedded={true} />
           </div>
         </section>
 

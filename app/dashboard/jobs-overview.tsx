@@ -125,12 +125,20 @@ export function JobsOverview({
         <p className="text-xs font-medium tracking-[0.12em] uppercase text-[#6a625c]">
           Job status
         </p>
-        <Link
-          href="/dashboard/cleanings"
-          className="text-xs text-[#4b443e] underline decoration-[#c5bdb4] hover:text-[#3c3732] transition"
-        >
-          View all →
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/cleanings/new"
+            className="rounded-full bg-[#1a1510] px-3.5 py-1.5 text-xs font-medium text-white hover:bg-[#2e2822] transition-colors"
+          >
+            + New cleaning
+          </Link>
+          <Link
+            href="/dashboard/cleanings"
+            className="text-xs text-[#4b443e] underline decoration-[#c5bdb4] hover:text-[#3c3732] transition"
+          >
+            View all →
+          </Link>
+        </div>
       </div>
 
       <div className="flex items-center gap-8">
