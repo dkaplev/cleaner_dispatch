@@ -41,10 +41,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Cleaner not found" }, { status: 404 });
     }
 
-    // Count landlords this cleaner referred
-    const referralCount = await prisma.user.count({
-      where: { referred_by_cleaner_id: cleanerId },
-    });
+    // Count referred landlords — qualified (paid) vs pending
+    const [qualifiedCount, pendingCount] = await Promise.all([
+      prisma.user.count({
+        where: { referred_by_cleaner_id: cleanerId, referral_paid_at: { not: null } },
+      }),
+      prisma.user.count({
+        where: { referred_by_cleaner_id: cleanerId, referral_paid_at: null },
+      }),
+    ]);
 
     const baseUrl = process.env.NEXTAUTH_URL ?? "https://cleaner-dispatch.vercel.app";
 
@@ -55,8 +60,10 @@ export async function GET(req: NextRequest) {
       referral_link: cleaner.referral_code
         ? `${baseUrl}/signup?ref=${cleaner.referral_code}`
         : null,
-      referral_count: referralCount,
-      estimated_earnings: referralCount * 20, // €20 per referral
+      // confirmed = landlord paid their first month, payout approved by admin
+      referral_count:           qualifiedCount,
+      referral_count_pending:   pendingCount,
+      estimated_earnings:       qualifiedCount * 20, // €20 per confirmed referral
       jobs_completed: cleaner.dispatch_attempts.length,
       upcoming_jobs: cleaner.assigned_jobs.filter(
         (j) => j.status === "accepted" || j.status === "in_progress"

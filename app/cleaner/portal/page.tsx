@@ -16,7 +16,8 @@ type PortalData = {
   name: string;
   referral_code: string | null;
   referral_link: string | null;
-  referral_count: number;
+  referral_count: number;          // confirmed (paid) referrals
+  referral_count_pending: number;  // signed up but not yet paid
   estimated_earnings: number;
   jobs_completed: number;
   upcoming_jobs: Job[];
@@ -148,9 +149,9 @@ function CleanerPortalContent() {
               {/* Referral stats */}
               <div className="mt-4 grid grid-cols-3 divide-x divide-[#e8d0a0] rounded-xl border border-[#e8d0a0] bg-white">
                 {[
-                  { label: "Landlords invited", value: data.referral_count },
-                  { label: "Earned", value: `€${data.estimated_earnings}` },
-                  { label: "Jobs done", value: data.jobs_completed },
+                  { label: "Confirmed",  value: data.referral_count },
+                  { label: "Earned",     value: `€${data.estimated_earnings}` },
+                  { label: "Jobs done",  value: data.jobs_completed },
                 ].map((s) => (
                   <div key={s.label} className="flex flex-col items-center py-3 px-2">
                     <p className="text-xl font-bold text-[#1a1510]">{s.value}</p>
@@ -158,6 +159,15 @@ function CleanerPortalContent() {
                   </div>
                 ))}
               </div>
+
+              {/* Pending referrals note */}
+              {data.referral_count_pending > 0 && (
+                <div className="mt-3 rounded-xl border border-[#e8d0a0] bg-[#fef9ee] px-4 py-3">
+                  <p className="text-xs text-[#7a5c1e]">
+                    <span className="font-semibold">{data.referral_count_pending} pending</span> — {data.referral_count_pending === 1 ? "a landlord you" : "landlords you"} referred {data.referral_count_pending === 1 ? "has" : "have"} signed up but {data.referral_count_pending === 1 ? "hasn't" : "haven't"} started a paid subscription yet. Your €{data.referral_count_pending * 20} will be approved once they do.
+                  </p>
+                </div>
+              )}
             </>
           ) : (
             <p className="mt-3 text-sm text-[#9a7a3a]">Your referral link is being generated. Check back shortly.</p>
