@@ -160,11 +160,23 @@ export async function syncCalendarFeed(
   const { property } = feed;
 
   // ── 4. Process incoming events ─────────────────────────────────────────────
+
+  // Cut-off: bookings whose checkout is before UTC midnight today are past
+  const syncCutoff = new Date();
+  syncCutoff.setUTCHours(0, 0, 0, 0);
+
   for (const [uid, event] of incomingMap) {
     const known = existingMap.get(uid);
 
     if (!known) {
       // ── NEW BOOKING ──────────────────────────────────────────────────────
+
+      // Ignore historical bookings that already ended before today
+      if (event.checkout < syncCutoff) {
+        result.skipped++;
+        continue;
+      }
+
       const { window_start, window_end } = buildWindow(
         event.checkin,
         event.checkout,

@@ -30,7 +30,8 @@ const MONTH_NAMES = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
 ];
-const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const DAY_LABELS       = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const DAY_LABELS_SHORT = ["M",  "T",  "W",  "T",  "F",  "S",  "S"];
 
 function buildMonthGrid(year: number, month: number): (Date | null)[] {
   const firstDay     = new Date(Date.UTC(year, month, 1));
@@ -331,9 +332,10 @@ export default function CalendarPage() {
           <div className="rounded-2xl border border-[#e3dcd1] overflow-hidden shadow-sm">
             {/* Day-of-week header */}
             <div className="grid grid-cols-7 bg-[#f5f0e8] border-b border-[#e3dcd1]">
-              {DAY_LABELS.map((d) => (
+              {DAY_LABELS.map((d, i) => (
                 <div key={d} className="py-2.5 text-center text-xs font-semibold text-[#6a625c] uppercase tracking-wider">
-                  {d}
+                  <span className="hidden sm:inline">{d}</span>
+                  <span className="sm:hidden">{DAY_LABELS_SHORT[i]}</span>
                 </div>
               ))}
             </div>
@@ -342,7 +344,7 @@ export default function CalendarPage() {
             <div className="grid grid-cols-7 bg-white divide-x divide-y divide-[#ede8e1]">
               {grid.map((day, i) => {
                 if (!day) {
-                  return <div key={i} className="bg-[#faf7f4] min-h-[100px]" />;
+                  return <div key={i} className="bg-[#faf7f4] min-h-[60px] sm:min-h-[100px]" />;
                 }
                 const dayMs   = day.getTime();
                 const dayStr  = ymd(day);
@@ -353,15 +355,15 @@ export default function CalendarPage() {
                 return (
                   <div
                     key={dayStr}
-                    className={`min-h-[100px] p-1.5 flex flex-col gap-1 ${
+                    className={`min-h-[60px] sm:min-h-[100px] p-1 sm:p-1.5 flex flex-col gap-0.5 sm:gap-1 ${
                       isToday ? "bg-[#fff8f2]" : "bg-white"
                     }`}
                   >
                     {/* Date number */}
                     <span
-                      className={`text-xs font-semibold self-start leading-none mb-0.5 ${
+                      className={`text-[11px] sm:text-xs font-semibold self-start leading-none mb-0.5 ${
                         isToday
-                          ? "w-6 h-6 flex items-center justify-center rounded-full bg-[#c45c0f] text-white text-[11px]"
+                          ? "w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full bg-[#c45c0f] text-white text-[10px] sm:text-[11px]"
                           : "text-[#6a625c]"
                       }`}
                     >
@@ -371,8 +373,22 @@ export default function CalendarPage() {
                     {/* Booking chips (from iCal sync) */}
                     {chips.map((chip) => (
                       <div key={chip.id + dayStr} className="space-y-0.5">
+                        {/* Mobile: compact bar with just arrow icon */}
                         <div
-                          className="rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate"
+                          className="rounded sm:hidden py-0.5 text-[10px] font-bold leading-none flex items-center justify-center"
+                          style={{
+                            background:  chip.palette.bg,
+                            color:       chip.palette.text,
+                            borderLeft:  `3px solid ${chip.palette.border}`,
+                            minHeight: "14px",
+                          }}
+                          title={`${chip.property_name}${chip.isCheckin ? " — check-in" : chip.isCheckout ? " — check-out" : ""}`}
+                        >
+                          {chip.isCheckin  ? "→" : chip.isCheckout ? "←" : <span className="block w-1 h-1 rounded-full" style={{ background: chip.palette.border }} />}
+                        </div>
+                        {/* Desktop: chip with full property name */}
+                        <div
+                          className="hidden sm:block rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate"
                           style={{
                             background:  chip.palette.bg,
                             color:       chip.palette.text,
@@ -390,17 +406,17 @@ export default function CalendarPage() {
                           chip.job_id ? (
                             <a
                               href={`/dashboard/jobs/${chip.job_id}`}
-                              className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 truncate transition-colors"
+                              className="flex items-center gap-0.5 rounded px-1 sm:px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 truncate transition-colors"
                               title="Cleaning job — click to view"
                             >
-                              🧹 Cleaning scheduled
+                              🧹<span className="hidden sm:inline ml-0.5">Cleaning</span>
                             </a>
                           ) : (
                             <div
-                              className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-amber-700 bg-amber-50 truncate"
+                              className="flex items-center gap-0.5 rounded px-1 sm:px-1.5 py-0.5 text-[10px] text-amber-700 bg-amber-50 truncate"
                               title="No cleaning job yet for this checkout"
                             >
-                              ⚠ No cleaning job
+                              ⚠<span className="hidden sm:inline ml-0.5">No job</span>
                             </div>
                           )
                         )}
@@ -417,13 +433,13 @@ export default function CalendarPage() {
                         <a
                           key={job.id}
                           href={`/dashboard/jobs/${job.id}`}
-                          className="rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate block hover:opacity-80 transition-opacity"
+                          className="rounded px-1 sm:px-1.5 py-0.5 text-[10px] font-medium leading-tight truncate block hover:opacity-80 transition-opacity"
                           style={{ background: pal.bg, color: pal.text, borderLeft: `3px solid ${pal.border}` }}
                           title={`${job.property_name} — Cleaning ${time} — ${lbl}`}
                         >
-                          🧹 {job.property_name}
+                          🧹<span className="hidden sm:inline ml-0.5">{job.property_name}</span>
                           <span
-                            className="ml-1 rounded-sm px-1 text-[9px]"
+                            className="hidden sm:inline ml-1 rounded-sm px-1 text-[9px]"
                             style={{ background: sc.bg, color: sc.text }}
                           >
                             {lbl}
